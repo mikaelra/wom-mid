@@ -122,10 +122,10 @@ const SCENE_CENTER: [number, number, number] = [0, 3.2, 0]; // Look at table/pla
 // One player per table side: north, south, east, west (all face toward table center)
 // Offset 1.4 keeps players clear of table (table is ~0.9 from center)
 const PLAYER_POSITIONS: { position: [number, number, number]; rotation: [number, number, number] }[] = [
-  { position: [0, 3.2, 1.4], rotation: [0, 0, 0] },              // North - faces -Z (south toward table)
-  { position: [0, 3.2, -1.4], rotation: [0, Math.PI, 0] },       // South - faces +Z (north toward table)
-  { position: [1.4, 3.2, 0], rotation: [0, Math.PI / 2, 0] },    // East - faces -X (west toward table)
-  { position: [-1.4, 3.2, 0], rotation: [0, -Math.PI / 2, 0] },  // West - faces +X (east toward table)
+  { position: [0, 3.2, 1.4], rotation: [0, Math.PI / 2, 0] },    // North - rotated 90°
+  { position: [0, 3.2, -1.4], rotation: [0, -Math.PI / 2, 0] },  // South - rotated 90°
+  { position: [1.4, 3.2, 0], rotation: [0, Math.PI, 0] },        // East - rotated 90°
+  { position: [-1.4, 3.2, 0], rotation: [0, 0, 0] },             // West - rotated 90°
 ];
 
 // Memoized players group – prevents remount when explosions state updates
