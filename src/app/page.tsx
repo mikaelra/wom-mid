@@ -7,80 +7,11 @@ import * as THREE from 'three';
 import Mountain from '@/components/mountain';
 import Table from '@/components/Table';
 import ExplosionEffect from '@/components/ExplosionEffect';
+import HomeOverlay from '@/components/home/HomeOverlay';
 
 // Dynamically import the Model component
 const Model = dynamic(() => import('../components/Model'), { ssr: false });
 const PlayerV1 = dynamic(() => import('../components/Playerv1'), { ssr: false });
-
-// Define props interface for Menu component
-interface MenuProps {
-  onFlyToClick: () => void;
-}
-
-// Menu component
-function Menu({ onFlyToClick }: MenuProps) {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  // State to track if the fly-to action has been triggered
-  const [hasFlown, setHasFlown] = useState(false);
-
-  const toggleMenu = () => setIsOpen(!isOpen);
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '20px',
-        left: '20px',
-        zIndex: 10,
-        background: 'rgba(0, 0, 0, 0.7)',
-        color: 'white',
-        padding: '10px',
-        borderRadius: '8px',
-        fontFamily: 'Arial, sans-serif',
-      }}
-    >
-      <button
-        onClick={toggleMenu}
-        style={{
-          background: '#4CAF50',
-          color: 'white',
-          border: 'none',
-          padding: '8px 16px',
-          cursor: 'pointer',
-          borderRadius: '4px',
-        }}
-      >
-        {isOpen ? 'Close Menu' : 'Open Menu'}
-      </button>
-      {isOpen && (
-        <ul style={{ listStyle: 'none', padding: '10px 0', margin: 0 }}>
-          <li
-            style={{ padding: '5px 0', cursor: hasFlown ? 'default' : 'pointer' }}
-            onClick={() => {
-              if (hasFlown) return; // Don't re-trigger fly-to or add players
-              onFlyToClick();
-              setHasFlown(true);
-            }}
-          >
-            {hasFlown ? 'Players are visible' : 'Fly to Position'}
-          </li>
-          <li
-            style={{ padding: '5px 0', cursor: 'pointer' }}
-            onClick={() => alert('Change model clicked!')}
-          >
-            Change Model
-          </li>
-          <li
-            style={{ padding: '5px 0', cursor: 'pointer' }}
-            onClick={() => alert('Toggle lighting clicked!')}
-          >
-            Toggle Lighting
-          </li>
-        </ul>
-      )}
-    </div>
-  );
-}
 
 // Define props interface for CameraAnimator component
 interface CameraAnimatorProps {
@@ -184,8 +115,8 @@ export default function Page() {
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* Menu overlay */}
-      <Menu onFlyToClick={handleFlyToClick} />
+      {/* Home overlay: auth, join/create lobby, rules, leaderboards, vault */}
+      <HomeOverlay />
       {/* 3D Canvas */}
       <Canvas camera={{ position: [33, 26, 33], fov: BASE_FOV }}>
       {/* Camera animation handler - smooth fly-in, responsive framing */}

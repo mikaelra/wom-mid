@@ -59,7 +59,7 @@ function PlayerV1Impl({
       ref={modelRef}
       object={sceneClone}
       scale={scale}
-      position={isAnimating ? initialPosition : position} // Use initial position if animating
+      {...(isAnimating ? {} : { position })}
       rotation={rotation}
     />
   );
