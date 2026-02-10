@@ -108,8 +108,9 @@ export default function Page() {
     setExplosions((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const handleFlyToClick = () => {
-    setTargetPosition(SCENE_CENTER); // Triggers fly-to; actual position is responsive
+  // Reserved for future use (e.g. trigger from HomeOverlay "Start" button)
+  const _handleFlyToClick = () => {
+    setTargetPosition(SCENE_CENTER);
     setShowPlayer(true);
   };
 

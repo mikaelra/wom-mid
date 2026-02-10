@@ -24,7 +24,7 @@ function ModelImpl({
 
   // Valgfritt: slå på skygger hvis ønskelig
   useEffect(() => {
-    scene.traverse((obj: any) => {
+    scene.traverse((obj: THREE.Object3D) => {
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
