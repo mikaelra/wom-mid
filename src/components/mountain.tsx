@@ -14,7 +14,7 @@ type Props = {
   rotation?: [number, number, number];
 };
 
-function mountainImpl({
+function Mountain({
   url = '/models/mountainv1.glb',
   scale = 100,
   position = [0, 0, 0],
@@ -24,7 +24,7 @@ function mountainImpl({
 
   // Valgfritt: slå på skygger hvis ønskelig
   useEffect(() => {
-    scene.traverse((obj: any) => {
+    scene.traverse((obj: THREE.Object3D) => {
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
@@ -45,7 +45,7 @@ function mountainImpl({
   return <primitive object={scene} scale={scale} position={position} rotation={rotation} />;
 }
 
-export default memo(mountainImpl);
+export default memo(Mountain);
 
 // Forhåndslaster modellen:
 useGLTF.preload('/models/mountainv1.glb');

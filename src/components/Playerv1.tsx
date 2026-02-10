@@ -24,12 +24,15 @@ function PlayerV1Impl({
   isAnimating = false,
 }: Props) {
   const { scene } = useGLTF(url);
-  const sceneClone = useMemo(() => scene.clone(), []); // Each instance needs its own clone
+  const sceneClone = useMemo(() => scene.clone(), [scene]); // Each instance needs its own clone
   const modelRef = useRef<THREE.Group>(null!);
 
-  // Set an initial "off-screen" position if animating
-  const initialPosition = new THREE.Vector3(position[0], 50, position[2]);
-  const targetPosition = new THREE.Vector3(...position);
+  // Set an initial "off-screen" position if animating (memoized for stable ref in useEffect deps)
+  const initialPosition = useMemo(
+    () => new THREE.Vector3(position[0], 50, position[2]),
+    [position[0], position[2]]
+  );
+  const targetPosition = useMemo(() => new THREE.Vector3(...position), [position[0], position[1], position[2]]);
 
   useFrame((_, delta) => {
     if (isAnimating && modelRef.current) {
@@ -45,14 +48,14 @@ function PlayerV1Impl({
       modelRef.current.position.copy(initialPosition);
     }
 
-    sceneClone.traverse((obj: any) => {
+    sceneClone.traverse((obj: THREE.Object3D) => {
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
         obj.renderOrder = 10;
       }
     });
-  }, [sceneClone]);
+  }, [sceneClone, isAnimating, initialPosition]);
   
   return (
     <primitive
