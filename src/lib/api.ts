@@ -59,6 +59,19 @@ export async function getPlayerRelics(playerName: string): Promise<{ relics: Rel
   return res.json();
 }
 
+export async function createGremlinLobby(playerName: string): Promise<{ lobby_id: string }> {
+  const res = await fetch(`${BACKEND_URL}/create_gremlin_lobby`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: playerName }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error((errorData as { error?: string }).error ?? "Failed to create gremlin lobby");
+  }
+  return res.json();
+}
+
 export async function getState(lobbyId: string): Promise<LobbyState> {
   const res = await fetch(`${BACKEND_URL}/get_state/${lobbyId}`);
   if (!res.ok) throw new Error(`get_state failed: ${res.status}`);
