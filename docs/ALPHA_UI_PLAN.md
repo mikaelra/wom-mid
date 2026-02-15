@@ -14,10 +14,11 @@ This document is the overarching design plan for the **World of Mythos Alpha** r
 6. [Matchmaking — Battle Royale & Team-Based](#6-matchmaking--battle-royale--team-based)
 7. [DLC — "Road to Olympus"](#7-dlc--road-to-olympus)
 8. [Combat Screen Overhaul](#8-combat-screen-overhaul)
-9. [Purchasable Stages (Merch)](#9-purchasable-stages-merch)
-10. [Distribution — App Stores & Steam](#10-distribution--app-stores--steam)
-11. [Technical Architecture Changes](#11-technical-architecture-changes)
-12. [Implementation Phases](#12-implementation-phases)
+9. [Chat System](#9-chat-system)
+10. [Purchasable Stages (Merch)](#10-purchasable-stages-merch)
+11. [Distribution — App Stores & Steam](#11-distribution--app-stores--steam)
+12. [Technical Architecture Changes](#12-technical-architecture-changes)
+13. [Implementation Phases](#13-implementation-phases)
 
 ---
 
@@ -624,9 +625,105 @@ Each of the 10 cities has a distinct arena environment:
 
 ---
 
-## 9. Purchasable Stages (Merch)
+## 9. Chat System
 
-### 9.1 Concept
+Two chat scopes exist in the alpha: **city chat** (global per city) and **lobby chat** (per match).
+
+### 9.1 City Chat
+
+Every city has a persistent, scrolling text chat visible in the **City Hub**. This is how players in the same city communicate, coordinate events, find teammates, and socialise.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  ← Back to Map                ATHENS                 │
+│                                                      │
+│  ┌──────────────────────────────────────────┐       │
+│  │ CITY CHAT                        [Hide]  │       │
+│  │                                           │       │
+│  │ Spartan99: anyone up for a gremlin?      │       │
+│  │ MythosKing: gg last match                │       │
+│  │ You: omw to the event                    │       │
+│  │                                           │       │
+│  │ [Type a message...]            [Send]     │       │
+│  └──────────────────────────────────────────┘       │
+│                                                      │
+│  [Find Match]  [Events]  [Leaderboard]  [Stats]     │
+└─────────────────────────────────────────────────────┘
+```
+
+**Behaviour:**
+- Messages are scoped to the city — only players currently in or viewing this city see them
+- Recent message history loaded on entering the city (last 50 messages)
+- Messages auto-scroll; player can scroll up to read history
+- Collapsible / hideable so it doesn't dominate the screen
+- Simple text only (no images, no links) for alpha
+- Basic spam prevention: rate limit (e.g., 1 message per 2 seconds per player)
+
+### 9.2 Lobby Chat
+
+Every active lobby (PvP match, gremlin event, DLC encounter, boss raid) has its own chat. This is visible in the combat HUD and lets players communicate during the match.
+
+```
+┌──────────────────────────────────────────┐
+│ LOBBY CHAT                               │
+│                                           │
+│ P1: targeting P3 this round              │
+│ P2: I'll defend                          │
+│ You: raiding the boss                    │
+│                                           │
+│ [Type a message...]            [Send]     │
+└──────────────────────────────────────────┘
+```
+
+**Behaviour:**
+- Messages are scoped to the lobby — only players in this match see them
+- Chat persists for the duration of the match; cleared when lobby is destroyed
+- Visible alongside the combat HUD (bottom or side panel, collapsible)
+- Especially important for **team battles** (2v2) and **DLC co-op** (Janus fight)
+- In team mode, an option to toggle between "team only" and "all" chat
+
+### 9.3 Frontend Components
+
+| Component | Description |
+|-----------|-------------|
+| `ChatPanel.tsx` | Reusable chat panel (used in both city hub and lobby) |
+| `ChatMessage.tsx` | Single message row (player name + text + timestamp) |
+| `ChatInput.tsx` | Text input with send button and rate limiting |
+
+### 9.4 Backend Requirements
+
+- **City chat**: Stored in Supabase for persistence — `chat_messages` table with `city_id`, `player_name`, `message`, `created_at`
+- **Lobby chat**: Stored in-memory (part of lobby state) — no persistence needed since lobbies are temporary
+- **Delivery method**: For alpha, use polling (fetch new messages every 2–3 seconds). Can upgrade to SSE or WebSockets later.
+- New endpoints:
+  - `GET /cities/<city_id>/chat` — fetch recent city chat messages (last 50)
+  - `POST /cities/<city_id>/chat` — send a city chat message
+  - `GET /lobby/<lobby_id>/chat` — fetch lobby chat messages (part of lobby state polling)
+  - `POST /lobby/<lobby_id>/chat` — send a lobby chat message
+- Rate limiting: max 1 message per 2 seconds per player
+- Message length limit: 200 characters
+
+### 9.5 Database
+
+```sql
+CREATE TABLE chat_messages (
+    id SERIAL PRIMARY KEY,
+    city_id INT REFERENCES cities(id),
+    player_name TEXT REFERENCES players(name),
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_chat_city_time ON chat_messages(city_id, created_at DESC);
+```
+
+Lobby chat does not need a table — it lives in the in-memory lobby dict alongside player actions and round state.
+
+---
+
+## 10. Purchasable Stages (Merch)
+
+### 10.1 Concept
 
 When players enter combat via matchmaking (accessed from the world map), each player sees a **stage** (arena background). Every player has a **default stage**, but can purchase city-themed stages as cosmetic merch.
 
@@ -637,7 +734,7 @@ When players enter combat via matchmaking (accessed from the world map), each pl
 
 This is purely cosmetic and creates an easily extensible revenue stream — every new city or themed stage is a new product.
 
-### 9.2 Stage System
+### 10.2 Stage System
 
 | Stage | Source | Price |
 |-------|--------|-------|
@@ -655,7 +752,7 @@ This is purely cosmetic and creates an easily extensible revenue stream — ever
 
 Future stages can be added easily — seasonal themes, DLC-themed stages, limited editions, etc.
 
-### 9.3 How It Works
+### 10.3 How It Works
 
 ```
 Player equips a stage in their profile/settings
@@ -666,7 +763,7 @@ Player equips a stage in their profile/settings
   → Other players in the same match see THEIR own stage, not yours
 ```
 
-### 9.4 UI
+### 10.4 UI
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -689,7 +786,7 @@ Player equips a stage in their profile/settings
 └─────────────────────────────────────────────────────┘
 ```
 
-### 9.5 Frontend Components
+### 10.5 Frontend Components
 
 | Component | Description |
 |-----------|-------------|
@@ -699,7 +796,7 @@ Player equips a stage in their profile/settings
 
 The `CombatScene.tsx` loads the arena environment based on `player.equipped_stage` rather than `lobby.city_id`.
 
-### 9.6 Backend Requirements
+### 10.6 Backend Requirements
 
 - New `stages` table: `id`, `name`, `city_id` (nullable — for non-city stages), `price_cents`, `preview_image`
 - New `player_stages` table: `player_name`, `stage_id`, `purchased_at`
@@ -710,7 +807,7 @@ The `CombatScene.tsx` loads the arena environment based on `player.equipped_stag
   - `POST /players/<name>/equip_stage` — equip a stage
 - Combat scene: frontend reads `equipped_stage` from player data, loads that arena environment
 
-### 9.7 Architecture Note
+### 10.7 Architecture Note
 
 The stage is **client-side only** — the backend doesn't need to know which stage a player is seeing during combat. It only stores:
 - Which stages the player owns
@@ -720,9 +817,9 @@ The frontend loads the 3D arena environment based on this. No changes to the com
 
 ---
 
-## 10. Distribution — App Stores & Steam
+## 11. Distribution — App Stores & Steam
 
-### 9.1 Technology Choice
+### 11.1 Technology Choice
 
 | Platform | Wrapper | Notes |
 |----------|---------|-------|
@@ -733,7 +830,7 @@ The frontend loads the 3D arena environment based on this. No changes to the com
 
 **Recommended stack: Capacitor for mobile + Tauri for desktop/Steam.**
 
-### 9.2 What Needs to Change
+### 11.2 What Needs to Change
 
 #### For Mobile (Capacitor)
 - Install `@capacitor/core` and `@capacitor/cli`
@@ -761,7 +858,7 @@ The frontend loads the 3D arena environment based on this. No changes to the com
 - Offline handling: graceful "no connection" screen
 - Deep links: `worldofmythos://lobby/ABC123` to join directly
 
-### 9.3 App Store Requirements
+### 11.3 App Store Requirements
 
 | Requirement | iOS | Android | Steam |
 |-------------|-----|---------|-------|
@@ -772,7 +869,7 @@ The frontend loads the 3D arena environment based on this. No changes to the com
 | **IAP for DLC** | Apple IAP (30% cut) | Google Play Billing (15-30%) | Steam checkout (30%) |
 | **Review time** | 1–7 days | 1–3 days | 2–5 days |
 
-### 9.4 Project Structure Addition
+### 11.4 Project Structure Addition
 
 ```
 wom-mid/
@@ -793,9 +890,9 @@ wom-mid/
 
 ---
 
-## 11. Technical Architecture Changes
+## 12. Technical Architecture Changes
 
-### 11.1 Backend Refactoring
+### 12.1 Backend Refactoring
 
 The current backend is a single ~2000-line file. For alpha, it should be modularized:
 
@@ -829,7 +926,7 @@ tjuvpakk-backend/
   └── render.yaml
 ```
 
-### 11.2 Database Schema Additions
+### 12.2 Database Schema Additions
 
 ```sql
 -- New tables for alpha
@@ -893,7 +990,7 @@ ALTER TABLE game_player_stats ADD COLUMN mode TEXT DEFAULT 'ffa';  -- 'ffa' or '
 ALTER TABLE game_player_stats ADD COLUMN event_id TEXT;
 ```
 
-### 11.3 Frontend State Management
+### 12.3 Frontend State Management
 
 The current app uses `useState` + localStorage. For alpha with more complex state, consider:
 
@@ -901,7 +998,7 @@ The current app uses `useState` + localStorage. For alpha with more complex stat
 - Keep localStorage for auth tokens
 - Keep 2-second polling for lobby state (upgrade to WebSockets later if needed)
 
-### 11.4 Real-time Considerations
+### 12.4 Real-time Considerations
 
 For matchmaking and events, polling every 2 seconds may feel sluggish. Options for alpha:
 
@@ -913,7 +1010,7 @@ Recommendation: **Keep polling for alpha**, add SSE for event notifications only
 
 ---
 
-## 12. Implementation Phases
+## 13. Implementation Phases
 
 ### Phase 1: Foundation
 
@@ -933,7 +1030,25 @@ Backend:
 - [ ] New endpoints: `GET /cities`, `GET /cities/<id>/leaderboards`
 - [ ] Begin modularizing `tjuvpakk_server.py` into route + model files
 
-### Phase 2: Events & Stats
+### Phase 2: Chat
+
+**Goal**: City chat and lobby chat are functional
+
+Frontend:
+- [ ] `ChatPanel.tsx` — reusable chat component (city + lobby)
+- [ ] City chat integrated into City Hub screen
+- [ ] Lobby chat integrated into combat HUD
+- [ ] Team chat toggle in team battle mode
+- [ ] Chat polling (every 2–3 seconds)
+
+Backend:
+- [ ] Create `chat_messages` table in Supabase
+- [ ] City chat endpoints (`GET /cities/<id>/chat`, `POST /cities/<id>/chat`)
+- [ ] Lobby chat (in-memory, part of lobby state)
+- [ ] Lobby chat endpoints (`GET /lobby/<id>/chat`, `POST /lobby/<id>/chat`)
+- [ ] Rate limiting (1 msg / 2s per player), message length limit (200 chars)
+
+### Phase 3: Events & Stats
 
 **Goal**: Gremlin events work, city stats are tracked
 
@@ -951,7 +1066,7 @@ Backend:
 - [ ] City-scoped leaderboard query
 - [ ] Player city stats endpoint
 
-### Phase 3: Matchmaking
+### Phase 4: Matchmaking
 
 **Goal**: Players can queue for BR and team matches
 
@@ -968,7 +1083,7 @@ Backend:
 - [ ] Combat engine: team rules (no friendly fire, team win condition)
 - [ ] Matchmaking endpoints (join, leave, status)
 
-### Phase 4: Combat Overhaul
+### Phase 5: Combat Overhaul
 
 **Goal**: Combat feels alive and cinematic
 
@@ -985,7 +1100,7 @@ Frontend:
 - [ ] Redesigned combat HUD
 - [ ] Audio system + minimum sound effects
 
-### Phase 5: DLC — Road to Olympus
+### Phase 6: DLC — Road to Olympus
 
 **Goal**: Purchasable tower climb with Styx, Janus (co-op), and Zeus
 
@@ -1007,7 +1122,7 @@ Backend:
 - [ ] Combat engine: apply equipped relic effects
 - [ ] Purchase verification (stub for alpha, real IAP later)
 
-### Phase 6: Platform Distribution
+### Phase 7: Platform Distribution
 
 **Goal**: Ship on iOS, Android, and Steam
 
@@ -1051,6 +1166,8 @@ Setup:
 | GET | `/cities/<id>` | City details |
 | GET | `/cities/<id>/leaderboards` | City-scoped leaderboard |
 | GET | `/cities/<id>/events` | Active gremlin events in city |
+| GET | `/cities/<id>/chat` | Fetch recent city chat messages |
+| POST | `/cities/<id>/chat` | Send a city chat message |
 | GET | `/cities/<id>/stats/<player>` | Player stats in city |
 | GET | `/events/active` | All active gremlin events |
 | POST | `/events/<id>/join` | Join a gremlin event |
@@ -1063,3 +1180,5 @@ Setup:
 | POST | `/players/<name>/equip_relic` | Equip a DLC relic |
 | GET | `/players/<name>/equipped_relic` | Get equipped relic |
 | GET | `/players/<name>/city_stats` | All city stat breakdowns |
+| GET | `/lobby/<id>/chat` | Fetch lobby chat messages |
+| POST | `/lobby/<id>/chat` | Send a lobby chat message |
