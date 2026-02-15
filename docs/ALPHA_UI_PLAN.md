@@ -682,28 +682,61 @@ Every active lobby (PvP match, gremlin event, DLC encounter, boss raid) has its 
 - Especially important for **team battles** (2v2) and **DLC co-op** (Janus fight)
 - In team mode, an option to toggle between "team only" and "all" chat
 
-### 9.3 Frontend Components
+### 9.3 Whisper (Free-for-All)
+
+In free-for-all lobbies, players can **whisper** — send a private message to one specific player that nobody else in the match can see. This enables secret alliances, betrayals, and tactical coordination.
+
+```
+┌──────────────────────────────────────────┐
+│ LOBBY CHAT                    [All ▼]    │
+│                                           │
+│ P1: anyone want to team up?              │
+│ [whisper from P2]: let's hit P3 together │
+│ You → P2: deal, I'll attack P3           │
+│                                           │
+│ [Type a message...]  [To: All ▼] [Send]  │
+└──────────────────────────────────────────┘
+```
+
+**Behaviour:**
+- Player selects a target from a dropdown: "All" (default) or a specific player name
+- Whisper messages are only visible to the sender and the recipient
+- Whispers are styled differently (e.g., italic, different colour) so they stand out
+- Other players have no indication that a whisper was sent
+- Adds a social/strategic layer to free-for-all: make temporary alliances, coordinate attacks, or bluff
+
+### 9.4 Chat Modes Summary
+
+| Mode | Scope | Visibility | Available in |
+|------|-------|------------|-------------|
+| **City chat** | Per city | All players in that city | City Hub |
+| **All chat** | Per lobby | All players in the match | All lobby types |
+| **Team chat** | Per lobby | Only your team | Team Battle (2v2) |
+| **Whisper** | Per lobby | Only you and one target player | Free-for-All |
+
+### 9.5 Frontend Components
 
 | Component | Description |
 |-----------|-------------|
 | `ChatPanel.tsx` | Reusable chat panel (used in both city hub and lobby) |
-| `ChatMessage.tsx` | Single message row (player name + text + timestamp) |
-| `ChatInput.tsx` | Text input with send button and rate limiting |
+| `ChatMessage.tsx` | Single message row (player name + text + timestamp + whisper styling) |
+| `ChatInput.tsx` | Text input with target selector dropdown (All / team / specific player) and send button |
 
-### 9.4 Backend Requirements
+### 9.6 Backend Requirements
 
 - **City chat**: Stored in Supabase for persistence — `chat_messages` table with `city_id`, `player_name`, `message`, `created_at`
 - **Lobby chat**: Stored in-memory (part of lobby state) — no persistence needed since lobbies are temporary
+- **Whisper**: `POST /lobby/<id>/chat` accepts optional `target_player` field. When set, the message is only returned to the sender and that specific player on `GET /lobby/<id>/chat`.
 - **Delivery method**: For alpha, use polling (fetch new messages every 2–3 seconds). Can upgrade to SSE or WebSockets later.
 - New endpoints:
   - `GET /cities/<city_id>/chat` — fetch recent city chat messages (last 50)
   - `POST /cities/<city_id>/chat` — send a city chat message
-  - `GET /lobby/<lobby_id>/chat` — fetch lobby chat messages (part of lobby state polling)
-  - `POST /lobby/<lobby_id>/chat` — send a lobby chat message
+  - `GET /lobby/<lobby_id>/chat?player_name=X` — fetch lobby chat messages visible to this player (filters out whispers not addressed to them)
+  - `POST /lobby/<lobby_id>/chat` — send a lobby chat message (body: `player_name`, `message`, optional `target_player` for whisper, optional `team_only` for team chat)
 - Rate limiting: max 1 message per 2 seconds per player
 - Message length limit: 200 characters
 
-### 9.5 Database
+### 9.7 Database
 
 ```sql
 CREATE TABLE chat_messages (
