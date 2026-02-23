@@ -5,11 +5,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createLobby, joinLobby, getRaidLobby, getNextRaidTime, getPlayerRelics, createGremlinLobby } from '@/lib/api';
 import type { Relic } from '@/types/game';
+import type { City } from '@/lib/cities';
 
 const buttonBase =
   'px-4 py-2 rounded-lg border-2 border-black font-bold cursor-pointer transition-colors';
 
-export default function HomeOverlay() {
+interface HomeOverlayProps {
+  /** If set, the overlay is shown as a City Hub for this city. */
+  city?: City | null;
+  /** Called when the player wants to return to the world map. */
+  onBackToMap?: () => void;
+}
+
+export default function HomeOverlay({ city, onBackToMap }: HomeOverlayProps) {
   const router = useRouter();
   const [name, setName] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -130,8 +138,19 @@ export default function HomeOverlay() {
 
   return (
     <>
-      {/* Top-left: auth + relics */}
+      {/* Top-left: back button + auth + relics */}
       <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
+        {/* Back to map button */}
+        {city && onBackToMap && (
+          <button
+            type="button"
+            onClick={onBackToMap}
+            className="flex items-center gap-2 bg-black/60 backdrop-blur-sm border border-white/20 text-white px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-black/80 transition-colors"
+          >
+            <span className="text-lg leading-none">&larr;</span> Back to Map
+          </button>
+        )}
+
         {!isLoggedIn && (
           <>
             <Link
@@ -209,6 +228,19 @@ export default function HomeOverlay() {
       {/* Center: main home content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
         <div className="pointer-events-auto flex flex-col items-center gap-4 text-white text-center">
+          {/* City name banner when in a city hub */}
+          {city && (
+            <div className="mb-2">
+              <h2
+                className="text-3xl font-extrabold tracking-wide drop-shadow-lg"
+                style={{ color: city.color }}
+              >
+                {city.name}
+              </h2>
+              <p className="text-sm text-white/60 mt-1">{city.tag} &mdash; {city.country}</p>
+            </div>
+          )}
+
           {secondsUntilNextRaid !== null && secondsUntilNextRaid > 0 && (
             <p className="font-bold text-lg drop-shadow-md">
               Next boss-fight in: {Math.floor(secondsUntilNextRaid / 60)}m {secondsUntilNextRaid % 60}s
