@@ -4,6 +4,32 @@ This document is the overarching design plan for the **World of Mythos Alpha** r
 
 ---
 
+## 0. Immediate Alpha Priorities
+
+> **Goal: Ship something playable.** Before pursuing world maps, cities, DLC, and distribution, the following must be done first. Everything else is post-alpha.
+
+### Must-have for Alpha
+
+1. **Character model** — Angel-cherub 3D model replaces placeholder; sits at table during lobby, dies on death. (Work in progress.)
+2. **Table-based lobby UI** — Characters sit around the table. All game actions are triggered by clicking on 3D elements or buttons anchored to characters — no flat menu panels.
+3. **Combat animations** — Polished enough to feel satisfying: attack, defend, raid, death, victory. This is a priority.
+4. **Lobby chat** — Players can text each other inside a lobby before and during a match.
+5. **All in-game button labels are in English.**
+
+### Not required for Alpha (post-alpha)
+
+- World map and city system
+- City chat
+- Matchmaking queues
+- DLC — Road to Olympus
+- Per-city themed arenas
+- App Store / Steam distribution
+- Purchasable stages
+
+---
+
+---
+
 ## Table of Contents
 
 1. [Vision & Current State](#1-vision--current-state)
@@ -560,36 +586,68 @@ Game over: Slow orbit around winner
 | Timer low | Ticking |
 | Event popup | Chime |
 
-### 8.6 Combat HUD Redesign
+### 8.6 Combat HUD Redesign — Table-Centric Interaction
+
+**Core principle:** There is no separate action menu panel. All choices are made by clicking on 3D elements in the scene. Buttons float as overlays anchored to characters and the table.
+
+#### Layout during the choice phase
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Round 3                           │
-│                    ⏱ 0:24                           │
+│                 Round 3    ⏱ 0:24                   │
 │                                                      │
-│  ┌─────┐                              ┌─────┐      │
-│  │ P1  │        [ 3D ARENA ]          │ P2  │      │
-│  │ ❤ 8 │       (city-themed)          │ ❤ 5 │      │
-│  │ ⚔ 2 │                              │ ⚔ 3 │      │
-│  └─────┘                              └─────┘      │
-│          ┌─────┐              ┌─────┐               │
-│          │ P3  │              │ P4  │               │
-│          │ ❤ 3 │              │ ☠   │               │
-│          │ ⚔ 1 │              │     │               │
-│          └─────┘              └─────┘               │
+│      [P2 name]                    [P3 name]          │
+│       ❤ 5  ⚔ 3                    ❤ 3  ⚔ 1         │
+│   ┌──────────┐                ┌──────────┐           │
+│   │ CHERUB   │                │ CHERUB   │           │
+│   │  (sits)  │                │  (sits)  │           │
+│   └──────────┘                └──────────┘           │
+│  [  Attack  ]                [  Attack  ]            │
+│   (on P2)                     (on P3)                │
 │                                                      │
-│  ┌──────────────────────────────────────────┐       │
-│  │ Resource: [❤ HP] [💰 Coin] [⚔ Attack]   │       │
-│  │ Action:   [⚔ Attack ▼] [🛡 Defend] [🏴 Raid] │  │
-│  │ Target:   [P2 ▼]                         │       │
-│  │                           [Confirm]       │       │
-│  └──────────────────────────────────────────┘       │
+│                  ╔══════════╗                        │
+│                  ║  THE     ║                        │
+│                  ║  WELL    ║  ← click = Raid        │
+│                  ╚══════════╝                        │
 │                                                      │
-│  Round log:                                          │
-│  • P1 attacked P3 for 2 damage                      │
-│  • P2 defended successfully                          │
+│   ┌──────────┐                                       │
+│   │ CHERUB   │  ← your character                     │
+│   │  (sits)  │                                       │
+│   └──────────┘                                       │
+│  [  Defend  ]  ← button on your own character        │
+│  [Get Life] [Get Gold] [Upgrade Strength]            │
+│   ↑ secondary actions, in a row below Defend         │
+│                                                      │
+│      [P4 name]                                       │
+│       ❤ 8  ⚔ 2                                      │
+│   ┌──────────┐                                       │
+│   │ CHERUB   │                                       │
+│   └──────────┘                                       │
+│  [  Attack  ]                                        │
+│                                                      │
+│  [Round log — collapsible, bottom edge]              │
 └─────────────────────────────────────────────────────┘
 ```
+
+#### Interaction rules
+
+| What you click | Action triggered |
+|----------------|-----------------|
+| **"Attack" button on an enemy character** | Selects that player as your attack target and submits Attack |
+| **"Defend" button on your own character** | Submits Defend |
+| **The Well (center of table)** | Submits Raid |
+| **"Get Life" (below Defend)** | Submits resource choice: HP |
+| **"Get Gold" (below Defend)** | Submits resource choice: Gold |
+| **"Upgrade Strength" (below Defend)** | Submits resource choice: Attack power |
+
+- During the choice phase, **Attack buttons appear on all living enemy characters**
+- **Defend** and the three **secondary action** buttons appear below your own character only
+- **The Well** is always visible in the center of the table; it is the Raid button
+- Once you have submitted a choice, all buttons grey out until the next round
+- Dead characters show no buttons; their model plays the death animation and stays visible
+
+#### Button language
+All button labels are in **English** regardless of the player's language.
 
 ### 8.7 Per-City Themed Arenas
 
@@ -613,23 +671,50 @@ Each of the 10 cities has a distinct arena environment:
 | Component | Description |
 |-----------|-------------|
 | `CombatScene.tsx` | New arena 3D scene (per-city themed) |
-| `PlayerModel.tsx` | Enhanced player with idle/attack/defend/death animations |
+| `PlayerModel.tsx` | Angel-cherub model with idle/sitting/attack/defend/death animations |
+| `PlayerButtons.tsx` | Overlay buttons anchored to a character (Attack / Defend + secondaries) |
+| `TheWell.tsx` | 3D well in the center of the table; clickable Raid button |
 | `SlashVFX.tsx` | Attack visual effect (particle slash arc) |
 | `ShieldVFX.tsx` | Defend visual effect (translucent dome) |
 | `DamageNumber.tsx` | Floating damage number that pops up and fades |
 | `RoundTitle.tsx` | "Round X" title card with animation |
-| `CombatHUD.tsx` | Redesigned HUD with player cards around the arena |
+| `CombatHUD.tsx` | Minimal HUD: round, timer, round log |
 | `CombatCamera.tsx` | Cinematic camera controller with attack cuts |
 | `DeathEffect.tsx` | Dissolve/shatter particle effect |
 | `VictoryEffect.tsx` | Confetti + spotlight for winner |
+
+### 8.9 Character Model — Angel Cherub
+
+> **Status: In progress.** A 3D-generated angel-cherub model is being created and will replace all placeholder player models.
+
+#### Model specifications
+
+| Property | Detail |
+|----------|--------|
+| **Base model** | Angel-cherub (3D generated) |
+| **Alpha skin** | Same model for all players in alpha; skins/cosmetics post-alpha |
+| **Idle / lobby** | Sitting animation — character sits at the table during lobby and choice phases |
+| **Death** | Death animation — plays when player is eliminated; model stays visible at table (greyed / slumped) |
+| **Attack** | Attack animation — plays when this player's attack resolves |
+| **Defend** | Block/brace animation — plays when defend resolves |
+| **Victory** | Victory pose — plays for the winning player at game over |
+
+#### Integration
+
+- Model loaded via React Three Fiber / `@react-three/fiber` + `@react-three/drei` (`useGLTF` or `useFBX`)
+- Animations driven by `AnimationMixer`; state machine maps game events → animation clips
+- Positioned around the table using fixed seat positions (same as existing `PlayersAtTable` layout)
+- HTML overlay buttons (`PlayerButtons.tsx`) are positioned in screen space relative to each character's 3D position using `Html` from `@react-three/drei`
 
 ---
 
 ## 9. Chat System
 
-Two chat scopes exist in the alpha: **city chat** (global per city) and **lobby chat** (per match).
+> **Alpha priority:** Only **lobby chat** is required for alpha. City chat requires the city system (post-alpha) and should be deferred. Lobby chat must be shipped with the playable alpha.
 
-### 9.1 City Chat
+Two chat scopes exist in the full plan: **city chat** (global per city) and **lobby chat** (per match).
+
+### 9.1 City Chat *(post-alpha — requires city system)*
 
 Every city has a persistent, scrolling text chat visible in the **City Hub**. This is how players in the same city communicate, coordinate events, find teammates, and socialise.
 
@@ -659,7 +744,7 @@ Every city has a persistent, scrolling text chat visible in the **City Hub**. Th
 - Simple text only (no images, no links) for alpha
 - Basic spam prevention: rate limit (e.g., 1 message per 2 seconds per player)
 
-### 9.2 Lobby Chat
+### 9.2 Lobby Chat *(Alpha — required)*
 
 Every active lobby (PvP match, gremlin event, DLC encounter, boss raid) has its own chat. This is visible in the combat HUD and lets players communicate during the match.
 
@@ -1045,7 +1130,71 @@ Recommendation: **Keep polling for alpha**, add SSE for event notifications only
 
 ## 13. Implementation Phases
 
-### Phase 1: Foundation
+> Phases are ordered by **alpha priority first**. Phases 1–3 must ship before alpha release. Phases 4–8 are post-alpha.
+
+---
+
+### Phase 1: Character Model & Table UI *(Alpha)*
+
+**Goal**: Angel-cherub model in scene; table-centric action buttons; no flat menu panel
+
+Frontend:
+- [ ] Integrate angel-cherub 3D model (`useGLTF` / `useFBX`) for all players
+- [ ] Sitting animation as default idle state in lobby
+- [ ] Death animation on player elimination
+- [ ] `PlayerButtons.tsx` — overlay buttons anchored to each character in 3D space (`Html` from drei)
+  - [ ] "Attack" button visible on each enemy character during choice phase
+  - [ ] "Defend" button on own character
+  - [ ] "Get Life", "Get Gold", "Upgrade Strength" buttons in a row below Defend on own character
+- [ ] `TheWell.tsx` — 3D well in center of table; clickable to submit Raid
+- [ ] Remove / replace old flat action menu panel
+- [ ] All button labels in English
+
+Backend:
+- [ ] No backend changes required for this phase
+
+### Phase 2: Combat Animation Polish *(Alpha)*
+
+**Goal**: Combat animations feel alive and satisfying
+
+Frontend:
+- [ ] Attack animation on attacker model when attack resolves
+- [ ] Attack VFX: slash arc particle effect toward target
+- [ ] Camera shake on attack hit
+- [ ] Damage number popup (floats up, fades)
+- [ ] Defend VFX: shield dome on model when defend resolves
+- [ ] Death animation + dissolve / shatter effect
+- [ ] Victory pose + confetti + spotlight on winner
+- [ ] "Round X" title card with brief animated swoosh between rounds
+- [ ] Cinematic camera: brief cut to attacker → target on attack
+- [ ] Slow orbit around winner on game over
+- [ ] Round timer: 3D floating element above table, pulses red when ≤ 10s
+
+Backend:
+- [ ] No backend changes required for this phase
+
+### Phase 3: Lobby Chat *(Alpha)*
+
+**Goal**: Players can chat inside a lobby during the match
+
+Frontend:
+- [ ] `ChatPanel.tsx` — scrolling chat panel embedded in the combat HUD (collapsible)
+- [ ] `ChatMessage.tsx` — single message row (player name + text)
+- [ ] `ChatInput.tsx` — text input + Send button
+- [ ] Chat polling (every 2–3 seconds via `GET /lobby/<id>/chat`)
+- [ ] Auto-scroll to latest message; player can scroll up to read history
+- [ ] Maximum 200 characters per message
+- [ ] Whisper mode: target dropdown (All / specific player), whisper styled in italic + different colour
+
+Backend:
+- [ ] Lobby chat stored in-memory (part of lobby state dict)
+- [ ] `GET /lobby/<id>/chat?player_name=X` — returns messages visible to this player (filters whispers)
+- [ ] `POST /lobby/<id>/chat` — body: `player_name`, `message`, optional `target_player`
+- [ ] Rate limiting: 1 message per 2 seconds per player
+
+---
+
+### Phase 4: Foundation — World Map & Cities *(post-alpha)*
 
 **Goal**: World map + cities + refactored navigation
 
@@ -1063,25 +1212,20 @@ Backend:
 - [ ] New endpoints: `GET /cities`, `GET /cities/<id>/leaderboards`
 - [ ] Begin modularizing `tjuvpakk_server.py` into route + model files
 
-### Phase 2: Chat
+### Phase 5: City Chat *(post-alpha)*
 
-**Goal**: City chat and lobby chat are functional
+**Goal**: City chat functional in City Hub
 
 Frontend:
-- [ ] `ChatPanel.tsx` — reusable chat component (city + lobby)
-- [ ] City chat integrated into City Hub screen
-- [ ] Lobby chat integrated into combat HUD
-- [ ] Team chat toggle in team battle mode
+- [ ] City chat integrated into City Hub screen (reuse `ChatPanel.tsx`)
 - [ ] Chat polling (every 2–3 seconds)
 
 Backend:
 - [ ] Create `chat_messages` table in Supabase
 - [ ] City chat endpoints (`GET /cities/<id>/chat`, `POST /cities/<id>/chat`)
-- [ ] Lobby chat (in-memory, part of lobby state)
-- [ ] Lobby chat endpoints (`GET /lobby/<id>/chat`, `POST /lobby/<id>/chat`)
 - [ ] Rate limiting (1 msg / 2s per player), message length limit (200 chars)
 
-### Phase 3: Events & Stats
+### Phase 6: Events & Stats *(post-alpha)*
 
 **Goal**: Gremlin events work, city stats are tracked
 
@@ -1099,7 +1243,7 @@ Backend:
 - [ ] City-scoped leaderboard query
 - [ ] Player city stats endpoint
 
-### Phase 4: Matchmaking
+### Phase 7: Matchmaking *(post-alpha)*
 
 **Goal**: Players can queue for BR and team matches
 
@@ -1116,24 +1260,15 @@ Backend:
 - [ ] Combat engine: team rules (no friendly fire, team win condition)
 - [ ] Matchmaking endpoints (join, leave, status)
 
-### Phase 5: Combat Overhaul
+### Phase 8: Per-City Arena Themes *(post-alpha)*
 
-**Goal**: Combat feels alive and cinematic
+**Goal**: Each city has a visually distinct arena environment
 
 Frontend:
-- [ ] New arena 3D scene (per-city themed — all 10 cities)
-- [ ] Player idle animations
-- [ ] Attack VFX (slash arc + camera shake)
-- [ ] Defend VFX (shield dome)
-- [ ] Damage number popups
-- [ ] Death dissolve effect
-- [ ] Victory celebration (confetti + spotlight)
-- [ ] Round title cards
-- [ ] Cinematic camera cuts on attacks
-- [ ] Redesigned combat HUD
+- [ ] New arena 3D scenes — all 10 cities (see section 8.7)
 - [ ] Audio system + minimum sound effects
 
-### Phase 6: DLC — Road to Olympus
+### Phase 9: DLC — Road to Olympus
 
 **Goal**: Purchasable tower climb with Styx, Janus (co-op), and Zeus
 
@@ -1155,7 +1290,7 @@ Backend:
 - [ ] Combat engine: apply equipped relic effects
 - [ ] Purchase verification (stub for alpha, real IAP later)
 
-### Phase 7: Platform Distribution
+### Phase 10: Platform Distribution
 
 **Goal**: Ship on iOS, Android, and Steam
 
