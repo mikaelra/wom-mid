@@ -210,15 +210,16 @@ When a player taps a city on the world map, they zoom into its **City Hub**:
 
 ## 4. Random Pop-Up Events
 
-For alpha, **only the Gremlin** event type exists. Its purpose is to teach players the game mechanics — it's a tutorial encounter wrapped in the event system.
+For alpha, **two event types exist**: the Gremlin (tutorial encounter) and the **Hades Raid** (a real challenge).
 
-### 4.1 Event Type (Alpha)
+### 4.1 Event Types (Alpha)
 
 | Event | Description | Players | Duration | Reward | Purpose |
 |-------|-------------|---------|----------|--------|---------|
 | **Gremlin** | Solo or co-op fight vs a Gremlin | 1–4 | 5 min | Coins, small relic chance | Teaches attack/defend/resource mechanics |
+| **Hades Raid** | Fight against Hades himself in the Underworld | 1–4 | ~10 min | Gold, exclusive Hades relic | Alpha's first real boss encounter — hard solo, trivial with friends |
 
-The event system is built generically so more event types can be added later via Supabase, but alpha ships with gremlin only.
+The event system is built generically so more event types can be added later via Supabase.
 
 ### 4.2 Event Lifecycle
 
@@ -254,9 +255,58 @@ The event system is built generically so more event types can be added later via
 | Component | Description |
 |-----------|-------------|
 | `EventToast.tsx` | Pop-up notification on world map |
-| `EventDetail.tsx` | Gremlin event info + join button |
+| `EventDetail.tsx` | Event info + join button (works for both gremlin and Hades Raid) |
 | `EventTimer.tsx` | Countdown to event start/expiry |
 | `EventRewards.tsx` | Post-event reward summary |
+
+---
+
+### 4.6 Hades Raid *(Alpha — required)*
+
+The Hades Raid is the alpha's signature encounter. It pops up in the **House of Hades** city and pits players against Hades — the god of the Underworld — using the existing raid combat engine, but with a boss that is **brutally hard to beat alone and manageable with two or more players**.
+
+#### Difficulty scaling
+
+| Players | Difficulty | Notes |
+|---------|-----------|-------|
+| 1 | **Hard** | Possible, but requires optimal play every round — no room for mistakes |
+| 2 | **Easy** | Two coordinated raiders can burst Hades down quickly |
+| 3–4 | **Very easy** | Overwhelms Hades; ends fast |
+
+Difficulty scales by **adjusting Hades' stats and mechanics** based on player count at lobby start:
+
+| Stat / Mechanic | Solo | 2 players | 3–4 players |
+|----------------|------|-----------|-------------|
+| Hades HP | 120 | 80 | 60 |
+| Hades damage per hit | 30 | 20 | 15 |
+| Shield phase (see below) | Every 2 rounds | Every 4 rounds | Disabled |
+| Raid damage multiplier | ×1.0 | ×1.2 (per player) | ×1.4 (per player) |
+
+#### Hades boss mechanics
+
+**Shield phase** — at set intervals, Hades raises an energy shield that **blocks all attack damage for one round**. The only way through the shield is a Raid on the Well. Solo players must time this correctly; in groups it happens rarely or not at all.
+
+**Soul drain** — Hades' attack is a soul drain that deals damage and heals him for half the amount. This punishes defensive play.
+
+**Underworld pull** — On a random round, Hades "pulls" one player toward the underworld: they skip their action for that round (stunned). With 2+ players, the others cover for the stunned player. Solo, this is a near-death moment.
+
+#### Scene
+
+The Hades Raid uses the **House of Hades arena** — the Underworld cavern with river Styx, ghostly flames, and stalactites. Hades appears as a large, seated figure across the table where other players normally sit.
+
+#### Reward
+
+Defeating Hades grants:
+- A large coin reward (scales with player count — less per-player with more participants)
+- Chance to earn the **Hades Relic** (passive: your death costs enemies 5 HP — the "Death Tax")
+- `raid_wins` stat increment (already tracked in backend)
+
+#### Spawn rules
+
+- Hades Raid spawns exclusively in **House of Hades** city
+- Spawns less frequently than Gremlins (e.g., once every 30–60 minutes)
+- Max 1 active Hades Raid at a time globally (not per city — it's a special event)
+- The event notification on the world map has a distinct visual treatment (red/purple, skull icon) to set it apart from Gremlin events
 
 ---
 
@@ -1300,25 +1350,44 @@ Backend:
 - [ ] City chat endpoints (`GET /cities/<id>/chat`, `POST /cities/<id>/chat`)
 - [ ] Rate limiting (1 msg / 2s per player), message length limit (200 chars)
 
-### Phase 6: Events & Stats *(post-alpha)*
+### Phase 6: Hades Raid *(Alpha — required)*
+
+**Goal**: Hades appears as a raid boss in the House of Hades city — hard solo, easy with 2+
+
+Frontend:
+- [ ] `EventDetail.tsx` updated to render Hades Raid with distinct visual treatment (red/purple, skull icon)
+- [ ] `EventToast.tsx` — global notification on world map when a Hades Raid spawns
+- [ ] `HadesScene.tsx` — Underworld arena (cavern, river Styx, ghostly flames); Hades seated at head of table
+- [ ] Hades boss model / placeholder displayed opposite players
+- [ ] Shield phase visual: Hades glows with a protective aura for the round
+- [ ] Underworld pull visual: targeted player's character dims/shakes for the skipped round
+- [ ] Post-raid reward screen shows Hades Relic chance
+
+Backend:
+- [ ] Hades Raid config in the `events` table (or hardcoded in scheduler for alpha)
+- [ ] Difficulty scaling: HP, damage, shield phase interval adjusted at lobby creation based on player count
+- [ ] Hades AI: soul drain (deal + heal half), shield phase (block all attacks, only Raid pierces), underworld pull (random player stunned)
+- [ ] Hades Relic reward: `hades_relic` flag on player; grants "Death Tax" passive
+- [ ] Hades Raid spawner: global, once every 30–60 min, only House of Hades city, max 1 active globally
+- [ ] `raid_wins` stat increment on Hades kill
+
+### Phase 7: Events & Stats *(post-alpha)*
 
 **Goal**: Gremlin events work, city stats are tracked
 
 Frontend:
-- [ ] Event toast notifications on world map
 - [ ] Gremlin event detail screen + join flow
 - [ ] City leaderboard component
 - [ ] City stats on player profile
 - [ ] Per-city stat display in city hub
 
 Backend:
-- [ ] Create `events` table
 - [ ] Background gremlin event scheduler (spawn in random cities)
 - [ ] Event join endpoint (creates lobby linked to event)
 - [ ] City-scoped leaderboard query
 - [ ] Player city stats endpoint
 
-### Phase 7: Matchmaking *(post-alpha)*
+### Phase 8: Matchmaking *(post-alpha)*
 
 **Goal**: Players can queue for BR and team matches
 
@@ -1335,7 +1404,7 @@ Backend:
 - [ ] Combat engine: team rules (no friendly fire, team win condition)
 - [ ] Matchmaking endpoints (join, leave, status)
 
-### Phase 8: Per-City Arena Themes *(post-alpha)*
+### Phase 9: Per-City Arena Themes *(post-alpha)*
 
 **Goal**: Each city has a visually distinct arena environment
 
@@ -1343,7 +1412,7 @@ Frontend:
 - [ ] New arena 3D scenes — all 10 cities (see section 8.7)
 - [ ] Audio system + minimum sound effects
 
-### Phase 9: DLC — Road to Olympus
+### Phase 10: DLC — Road to Olympus
 
 **Goal**: Purchasable tower climb with Styx, Janus (co-op), and Zeus
 
@@ -1365,7 +1434,7 @@ Backend:
 - [ ] Combat engine: apply equipped relic effects
 - [ ] Purchase verification (stub for alpha, real IAP later)
 
-### Phase 10: Platform Distribution
+### Phase 11: Platform Distribution
 
 **Goal**: Ship on iOS, Android, and Steam
 
