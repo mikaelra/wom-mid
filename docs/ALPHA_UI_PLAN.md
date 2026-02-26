@@ -263,50 +263,46 @@ The event system is built generically so more event types can be added later via
 
 ### 4.6 Hades Raid *(Alpha — required)*
 
-The Hades Raid is the alpha's signature encounter. It pops up in the **House of Hades** city and pits players against Hades — the god of the Underworld — using the existing raid combat engine, but with a boss that is **brutally hard to beat alone and manageable with two or more players**.
+The Hades Raid is the alpha's signature encounter. It spawns in the **House of Hades** city and pits players against Hades — the god of the Underworld. Hades is a **fixed opponent**: his stats do not change based on how many players join. The difficulty difference between solo and co-op emerges naturally from having more players contributing attacks each round.
 
-#### Difficulty scaling
+#### Starting conditions
 
-| Players | Difficulty | Notes |
-|---------|-----------|-------|
-| 1 | **Hard** | Possible, but requires optimal play every round — no room for mistakes |
-| 2 | **Easy** | Two coordinated raiders can burst Hades down quickly |
-| 3–4 | **Very easy** | Overwhelms Hades; ends fast |
+- **Each player:** 10 HP, 1 weapon, 0 gold — the same as any other match
+- **Hades:** 8 HP, 2 attacks per round (fixed, regardless of player count)
 
-Difficulty scales by **adjusting Hades' stats and mechanics** based on player count at lobby start:
+There is no artificial scaling. More players win more easily simply because they deal more combined damage.
 
-| Stat / Mechanic | Solo | 2 players | 3–4 players |
-|----------------|------|-----------|-------------|
-| Hades HP | 120 | 80 | 60 |
-| Hades damage per hit | 30 | 20 | 15 |
-| Shield phase (see below) | Every 2 rounds | Every 4 rounds | Disabled |
-| Raid damage multiplier | ×1.0 | ×1.2 (per player) | ×1.4 (per player) |
+#### Hades AI
 
-#### Hades boss mechanics
+Hades is driven by a **trained AI**, not hand-written rules. The AI is trained via self-play iteration with the target win rates as criteria:
 
-**Shield phase** — at set intervals, Hades raises an energy shield that **blocks all attack damage for one round**. The only way through the shield is a Raid on the Well. Solo players must time this correctly; in groups it happens rarely or not at all.
+| Scenario | Target Hades win rate |
+|----------|----------------------|
+| 1 player | ~70% |
+| 2 players | ~20% |
 
-**Soul drain** — Hades' attack is a soul drain that deals damage and heals him for half the amount. This punishes defensive play.
-
-**Underworld pull** — On a random round, Hades "pulls" one player toward the underworld: they skip their action for that round (stunned). With 2+ players, the others cover for the stunned player. Solo, this is a near-death moment.
+The AI iterates until it reliably hits these benchmarks. This means:
+- Solo feels genuinely hard — Hades has learned to exploit individual players
+- Two players tip the balance strongly in the players' favour
+- No hand-tuned logic; the difficulty curve is a natural outcome of the trained behaviour
 
 #### Scene
 
-The Hades Raid uses the **House of Hades arena** — the Underworld cavern with river Styx, ghostly flames, and stalactites. Hades appears as a large, seated figure across the table where other players normally sit.
+The Hades Raid uses the **House of Hades arena** — the Underworld cavern with river Styx, ghostly flames, and stalactites. Hades appears as a large figure across the table where other players normally sit.
 
 #### Reward
 
 Defeating Hades grants:
-- A large coin reward (scales with player count — less per-player with more participants)
-- Chance to earn the **Hades Relic** (passive: your death costs enemies 5 HP — the "Death Tax")
+- A gold reward
+- Chance to earn the **Hades Relic**
 - `raid_wins` stat increment (already tracked in backend)
 
 #### Spawn rules
 
-- Hades Raid spawns exclusively in **House of Hades** city
+- Spawns exclusively in **House of Hades** city
 - Spawns less frequently than Gremlins (e.g., once every 30–60 minutes)
-- Max 1 active Hades Raid at a time globally (not per city — it's a special event)
-- The event notification on the world map has a distinct visual treatment (red/purple, skull icon) to set it apart from Gremlin events
+- Max 1 active Hades Raid globally at a time
+- Distinct visual treatment in world map notifications (red/purple, skull icon) to set it apart from Gremlin events
 
 ---
 
@@ -1352,23 +1348,21 @@ Backend:
 
 ### Phase 6: Hades Raid *(Alpha — required)*
 
-**Goal**: Hades appears as a raid boss in the House of Hades city — hard solo, easy with 2+
+**Goal**: Hades appears as a fixed raid boss — 8 HP, 2 attacks — defeated by trained AI targeting ~70% win rate solo, ~20% with 2 players
 
 Frontend:
 - [ ] `EventDetail.tsx` updated to render Hades Raid with distinct visual treatment (red/purple, skull icon)
 - [ ] `EventToast.tsx` — global notification on world map when a Hades Raid spawns
 - [ ] `HadesScene.tsx` — Underworld arena (cavern, river Styx, ghostly flames); Hades seated at head of table
 - [ ] Hades boss model / placeholder displayed opposite players
-- [ ] Shield phase visual: Hades glows with a protective aura for the round
-- [ ] Underworld pull visual: targeted player's character dims/shakes for the skipped round
 - [ ] Post-raid reward screen shows Hades Relic chance
 
 Backend:
-- [ ] Hades Raid config in the `events` table (or hardcoded in scheduler for alpha)
-- [ ] Difficulty scaling: HP, damage, shield phase interval adjusted at lobby creation based on player count
-- [ ] Hades AI: soul drain (deal + heal half), shield phase (block all attacks, only Raid pierces), underworld pull (random player stunned)
-- [ ] Hades Relic reward: `hades_relic` flag on player; grants "Death Tax" passive
+- [ ] Hades Raid lobby type: players start with 10 HP, 1 weapon, 0 gold; Hades starts with 8 HP, 2 attacks (no scaling)
+- [ ] Hades AI module: trained via self-play iteration; target win rates ~70% (1 player), ~20% (2 players)
+- [ ] AI training harness: simulate Hades Raid rounds, evaluate win %, iterate until criteria are met
 - [ ] Hades Raid spawner: global, once every 30–60 min, only House of Hades city, max 1 active globally
+- [ ] Hades Relic reward: stored on player record
 - [ ] `raid_wins` stat increment on Hades kill
 
 ### Phase 7: Events & Stats *(post-alpha)*
