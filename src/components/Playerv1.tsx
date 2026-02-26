@@ -49,7 +49,7 @@ function PlayerV1Impl({
     }
 
     sceneClone.traverse((obj: THREE.Object3D) => {
-      if (obj.isMesh) {
+      if (obj instanceof THREE.Mesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
         obj.renderOrder = 10;
