@@ -25,12 +25,11 @@ function ModelImpl({
   // Valgfritt: slå på skygger hvis ønskelig
   useEffect(() => {
     scene.traverse((obj: THREE.Object3D) => {
-      if (obj.isMesh) {
+      if (obj instanceof THREE.Mesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
-      }
 
-      // 🎨 Gi materialet en tilfeldig farge
+        // 🎨 Gi materialet en tilfeldig farge
         if (obj.material) {
           const randomColor = new THREE.Color(Math.random(), Math.random(), Math.random());
           // Hvis materialet støtter farge
@@ -39,6 +38,7 @@ function ModelImpl({
             obj.material.color = randomColor;
           }
         }
+      }
     });
   }, [scene]);
 
