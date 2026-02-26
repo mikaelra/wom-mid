@@ -4,6 +4,32 @@ This document is the overarching design plan for the **World of Mythos Alpha** r
 
 ---
 
+## 0. Immediate Alpha Priorities
+
+> **Goal: Ship something playable.** Before pursuing world maps, cities, DLC, and distribution, the following must be done first. Everything else is post-alpha.
+
+### Must-have for Alpha
+
+1. **Character model** — Angel-cherub 3D model replaces placeholder; sits at table during lobby, dies on death. (Work in progress.)
+2. **Table-based lobby UI** — Characters sit around the table. All game actions are triggered by clicking on 3D elements or buttons anchored to characters — no flat menu panels.
+3. **Combat animations** — Polished enough to feel satisfying: attack, defend, raid, death, victory. This is a priority.
+4. **Lobby chat** — Players can text each other inside a lobby before and during a match.
+5. **All in-game button labels are in English.**
+
+### Not required for Alpha (post-alpha)
+
+- World map and city system
+- City chat
+- Matchmaking queues
+- DLC — Road to Olympus
+- Per-city themed arenas
+- App Store / Steam distribution
+- Purchasable stages
+
+---
+
+---
+
 ## Table of Contents
 
 1. [Vision & Current State](#1-vision--current-state)
@@ -184,15 +210,16 @@ When a player taps a city on the world map, they zoom into its **City Hub**:
 
 ## 4. Random Pop-Up Events
 
-For alpha, **only the Gremlin** event type exists. Its purpose is to teach players the game mechanics — it's a tutorial encounter wrapped in the event system.
+For alpha, **two event types exist**: the Gremlin (tutorial encounter) and the **Hades Raid** (a real challenge).
 
-### 4.1 Event Type (Alpha)
+### 4.1 Event Types (Alpha)
 
 | Event | Description | Players | Duration | Reward | Purpose |
 |-------|-------------|---------|----------|--------|---------|
 | **Gremlin** | Solo or co-op fight vs a Gremlin | 1–4 | 5 min | Coins, small relic chance | Teaches attack/defend/resource mechanics |
+| **Hades Raid** | Fight against Hades himself in the Underworld | 1–4 | ~10 min | Gold, exclusive Hades relic | Alpha's first real boss encounter — hard solo, trivial with friends |
 
-The event system is built generically so more event types can be added later via Supabase, but alpha ships with gremlin only.
+The event system is built generically so more event types can be added later via Supabase.
 
 ### 4.2 Event Lifecycle
 
@@ -228,9 +255,54 @@ The event system is built generically so more event types can be added later via
 | Component | Description |
 |-----------|-------------|
 | `EventToast.tsx` | Pop-up notification on world map |
-| `EventDetail.tsx` | Gremlin event info + join button |
+| `EventDetail.tsx` | Event info + join button (works for both gremlin and Hades Raid) |
 | `EventTimer.tsx` | Countdown to event start/expiry |
 | `EventRewards.tsx` | Post-event reward summary |
+
+---
+
+### 4.6 Hades Raid *(Alpha — required)*
+
+The Hades Raid is the alpha's signature encounter. It spawns in the **House of Hades** city and pits players against Hades — the god of the Underworld. Hades is a **fixed opponent**: his stats do not change based on how many players join. The difficulty difference between solo and co-op emerges naturally from having more players contributing attacks each round.
+
+#### Starting conditions
+
+- **Each player:** 10 HP, 1 weapon, 0 gold — the same as any other match
+- **Hades:** 8 HP, 2 attacks per round (fixed, regardless of player count)
+
+There is no artificial scaling. More players win more easily simply because they deal more combined damage.
+
+#### Hades AI
+
+Hades is driven by a **trained AI**, not hand-written rules. The AI is trained via self-play iteration with the target win rates as criteria:
+
+| Scenario | Target Hades win rate |
+|----------|----------------------|
+| 1 player | ~70% |
+| 2 players | ~20% |
+
+The AI iterates until it reliably hits these benchmarks. This means:
+- Solo feels genuinely hard — Hades has learned to exploit individual players
+- Two players tip the balance strongly in the players' favour
+- No hand-tuned logic; the difficulty curve is a natural outcome of the trained behaviour
+
+#### Scene
+
+The Hades Raid uses the **House of Hades arena** — the Underworld cavern with river Styx, ghostly flames, and stalactites. Hades appears as a large figure across the table where other players normally sit.
+
+#### Reward
+
+Defeating Hades grants:
+- A gold reward
+- Chance to earn the **Hades Relic**
+- `raid_wins` stat increment (already tracked in backend)
+
+#### Spawn rules
+
+- Spawns exclusively in **House of Hades** city
+- Spawns less frequently than Gremlins (e.g., once every 30–60 minutes)
+- Max 1 active Hades Raid globally at a time
+- Distinct visual treatment in world map notifications (red/purple, skull icon) to set it apart from Gremlin events
 
 ---
 
@@ -548,7 +620,44 @@ Boss attack: Camera shakes
 Game over: Slow orbit around winner
 ```
 
-### 8.5 Audio Cues (Minimum Viable)
+### 8.5 Execution Phase — Blackout
+
+When **all players have submitted their choices**, the scene cuts to black before the results play out. This is the moment between choosing and seeing what happens.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                                                      │
+│                                                      │
+│                   ████████████                       │
+│                   (full black)                       │
+│                                                      │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+**Behaviour:**
+- Screen fades to **full black** — no HUD, no characters, no buttons
+- **Audio plays in the background**: sounds of what's happening (slash, impact, shield clang, death thud, etc.) play sequentially as the actions are resolved server-side
+- The sequence of sounds gives the players a sense of what happened before they see it
+- After the audio sequence (~1.5–3 seconds depending on how many events occurred), the screen fades back in
+- The scene is updated to reflect the round results: HP changes, dead characters in death pose, etc.
+- A brief round summary or floating damage numbers confirm what happened
+
+**Audio sequence during blackout (example):**
+```
+Round submitted by all →
+  [fade to black]
+  → slash sound (attack)
+  → impact sound (hit)
+  → shield clang (defend)
+  → low thud + echo (death)
+  [fade back to scene]
+  → round log updates + damage numbers float
+```
+
+This creates suspense and makes the resolution feel dramatic rather than instant.
+
+### 8.6 Audio Cues (Minimum Viable)
 
 | Event | Sound |
 |-------|-------|
@@ -560,38 +669,70 @@ Game over: Slow orbit around winner
 | Timer low | Ticking |
 | Event popup | Chime |
 
-### 8.6 Combat HUD Redesign
+### 8.7 Combat HUD Redesign — Table-Centric Interaction
+
+**Core principle:** There is no separate action menu panel. All choices are made by clicking on 3D elements in the scene. Buttons float as overlays anchored to characters and the table.
+
+#### Layout during the choice phase
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Round 3                           │
-│                    ⏱ 0:24                           │
+│                 Round 3    ⏱ 0:24                   │
 │                                                      │
-│  ┌─────┐                              ┌─────┐      │
-│  │ P1  │        [ 3D ARENA ]          │ P2  │      │
-│  │ ❤ 8 │       (city-themed)          │ ❤ 5 │      │
-│  │ ⚔ 2 │                              │ ⚔ 3 │      │
-│  └─────┘                              └─────┘      │
-│          ┌─────┐              ┌─────┐               │
-│          │ P3  │              │ P4  │               │
-│          │ ❤ 3 │              │ ☠   │               │
-│          │ ⚔ 1 │              │     │               │
-│          └─────┘              └─────┘               │
+│      [P2 name]                    [P3 name]          │
+│       ❤ 5  ⚔ 3                    ❤ 3  ⚔ 1         │
+│   ┌──────────┐                ┌──────────┐           │
+│   │ CHERUB   │                │ CHERUB   │           │
+│   │  (sits)  │                │  (sits)  │           │
+│   └──────────┘                └──────────┘           │
+│  [  Attack  ]                [  Attack  ]            │
+│   (on P2)                     (on P3)                │
 │                                                      │
-│  ┌──────────────────────────────────────────┐       │
-│  │ Resource: [❤ HP] [💰 Coin] [⚔ Attack]   │       │
-│  │ Action:   [⚔ Attack ▼] [🛡 Defend] [🏴 Raid] │  │
-│  │ Target:   [P2 ▼]                         │       │
-│  │                           [Confirm]       │       │
-│  └──────────────────────────────────────────┘       │
+│                  ╔══════════╗                        │
+│                  ║  THE     ║                        │
+│                  ║  WELL    ║  ← click = Raid        │
+│                  ╚══════════╝                        │
 │                                                      │
-│  Round log:                                          │
-│  • P1 attacked P3 for 2 damage                      │
-│  • P2 defended successfully                          │
+│   ┌──────────┐                                       │
+│   │ CHERUB   │  ← your character                     │
+│   │  (sits)  │                                       │
+│   └──────────┘                                       │
+│  [  Defend  ]  ← button on your own character        │
+│  [Get Life] [Get Gold] [Upgrade Strength]            │
+│   ↑ secondary actions, in a row below Defend         │
+│                                                      │
+│      [P4 name]                                       │
+│       ❤ 8  ⚔ 2                                      │
+│   ┌──────────┐                                       │
+│   │ CHERUB   │                                       │
+│   └──────────┘                                       │
+│  [  Attack  ]                                        │
+│                                                      │
+│  [Round log — collapsible, bottom edge]              │
 └─────────────────────────────────────────────────────┘
 ```
 
-### 8.7 Per-City Themed Arenas
+#### Interaction rules
+
+| What you click | Action triggered |
+|----------------|-----------------|
+| **"Attack" button on an enemy character** | Selects that player as your attack target and submits Attack |
+| **"Defend" button on your own character** | Submits Defend |
+| **The Well (center of table)** | Submits Raid |
+| **"Get Life" (below Defend)** | Submits resource choice: HP |
+| **"Get Gold" (below Defend)** | Submits resource choice: Gold |
+| **"Upgrade Strength" (below Defend)** | Submits resource choice: Attack power |
+
+- During the choice phase, **Attack buttons appear on all living enemy characters**
+- **Defend** and the three **secondary action** buttons appear below your own character only
+- **The Well** is always visible in the center of the table; it is the Raid button
+- Once you have submitted a choice, all buttons grey out until the next round
+- Dead characters show no buttons; their model plays the death animation and stays visible
+
+#### Button language
+All button labels are in **English** regardless of the player's language.
+
+### 8.8 Per-City Themed Arenas
 
 Each of the 10 cities has a distinct arena environment:
 
@@ -608,28 +749,55 @@ Each of the 10 cities has a distinct arena environment:
 | Tokyo | Shinto shrine, cherry blossoms |
 | House of Hades | Cavern, ghostly flames, river Styx |
 
-### 8.8 Frontend Components
+### 8.9 Frontend Components
 
 | Component | Description |
 |-----------|-------------|
 | `CombatScene.tsx` | New arena 3D scene (per-city themed) |
-| `PlayerModel.tsx` | Enhanced player with idle/attack/defend/death animations |
+| `PlayerModel.tsx` | Angel-cherub model with idle/sitting/attack/defend/death animations |
+| `PlayerButtons.tsx` | Overlay buttons anchored to a character (Attack / Defend + secondaries) |
+| `TheWell.tsx` | 3D well in the center of the table; clickable Raid button |
 | `SlashVFX.tsx` | Attack visual effect (particle slash arc) |
 | `ShieldVFX.tsx` | Defend visual effect (translucent dome) |
 | `DamageNumber.tsx` | Floating damage number that pops up and fades |
 | `RoundTitle.tsx` | "Round X" title card with animation |
-| `CombatHUD.tsx` | Redesigned HUD with player cards around the arena |
+| `CombatHUD.tsx` | Minimal HUD: round, timer, round log |
 | `CombatCamera.tsx` | Cinematic camera controller with attack cuts |
 | `DeathEffect.tsx` | Dissolve/shatter particle effect |
 | `VictoryEffect.tsx` | Confetti + spotlight for winner |
+
+### 8.10 Character Model — Angel Cherub
+
+> **Status: In progress.** A 3D-generated angel-cherub model is being created and will replace all placeholder player models.
+
+#### Model specifications
+
+| Property | Detail |
+|----------|--------|
+| **Base model** | Angel-cherub (3D generated) |
+| **Alpha skin** | Same model for all players in alpha; skins/cosmetics post-alpha |
+| **Idle / lobby** | Sitting animation — character sits at the table during lobby and choice phases |
+| **Death** | Death animation — plays when player is eliminated; model stays visible at table (greyed / slumped) |
+| **Attack** | Attack animation — plays when this player's attack resolves |
+| **Defend** | Block/brace animation — plays when defend resolves |
+| **Victory** | Victory pose — plays for the winning player at game over |
+
+#### Integration
+
+- Model loaded via React Three Fiber / `@react-three/fiber` + `@react-three/drei` (`useGLTF` or `useFBX`)
+- Animations driven by `AnimationMixer`; state machine maps game events → animation clips
+- Positioned around the table using fixed seat positions (same as existing `PlayersAtTable` layout)
+- HTML overlay buttons (`PlayerButtons.tsx`) are positioned in screen space relative to each character's 3D position using `Html` from `@react-three/drei`
 
 ---
 
 ## 9. Chat System
 
-Two chat scopes exist in the alpha: **city chat** (global per city) and **lobby chat** (per match).
+> **Alpha priority:** Only **lobby chat** is required for alpha. City chat requires the city system (post-alpha) and should be deferred. Lobby chat must be shipped with the playable alpha.
 
-### 9.1 City Chat
+Two chat scopes exist in the full plan: **city chat** (global per city) and **lobby chat** (per match).
+
+### 9.1 City Chat *(post-alpha — requires city system)*
 
 Every city has a persistent, scrolling text chat visible in the **City Hub**. This is how players in the same city communicate, coordinate events, find teammates, and socialise.
 
@@ -659,26 +827,59 @@ Every city has a persistent, scrolling text chat visible in the **City Hub**. Th
 - Simple text only (no images, no links) for alpha
 - Basic spam prevention: rate limit (e.g., 1 message per 2 seconds per player)
 
-### 9.2 Lobby Chat
+### 9.2 Lobby Chat *(Alpha — required)*
 
-Every active lobby (PvP match, gremlin event, DLC encounter, boss raid) has its own chat. This is visible in the combat HUD and lets players communicate during the match.
+Every active lobby has its own chat. The chat is accessed via a **corner button** that opens an overlay — it does not live permanently in the HUD. When a player sends a message, a **speech bubble appears above their 3D character** in the scene so other players can see it without opening the overlay.
+
+#### Corner button + overlay
 
 ```
-┌──────────────────────────────────────────┐
-│ LOBBY CHAT                               │
-│                                           │
-│ P1: targeting P3 this round              │
-│ P2: I'll defend                          │
-│ You: raiding the boss                    │
-│                                           │
-│ [Type a message...]            [Send]     │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                 Round 3    ⏱ 0:24         [💬]      │  ← corner button
+│                                                      │
+│    (3D scene — characters, well, action buttons)    │
+│                                                      │
+└─────────────────────────────────────────────────────┘
 ```
+
+When [💬] is tapped, a chat overlay slides in **without covering the action buttons**:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 Round 3    ⏱ 0:24         [💬 ✕]   │
+│                                                      │
+│  (3D scene still visible behind overlay)            │
+│                                                      │
+│                        ┌──────────────────────────┐ │
+│                        │ CHAT               [✕]   │ │
+│                        │                           │ │
+│                        │ P1: attacking P3          │ │
+│                        │ P2: I'll defend           │ │
+│                        │ You: raiding the boss     │ │
+│                        │                           │ │
+│                        │ [Type...] [To: All▼][Send]│ │
+│                        └──────────────────────────┘ │
+│                                                      │
+│  [  Defend  ]   [Get Life] [Get Gold] [Upg. Str.]   │ ← still reachable
+└─────────────────────────────────────────────────────┘
+```
+
+- The overlay is **anchored to one side** (e.g., right edge) so it never covers your own character's action buttons
+- The overlay can be closed with [✕] or by clicking outside it
+- The corner button shows a **notification dot** when new messages arrive while the overlay is closed
+
+#### Speech bubbles in 3D
+
+When a player sends a message, a speech bubble appears above their character in the scene — visible to everyone without opening the overlay:
+
+- Bubble fades out after ~3 seconds
+- Shows the first ~30 characters; longer messages are truncated with "…"
+- Whispers do NOT show as speech bubbles (they are private)
+- `SpeechBubble.tsx` rendered using `Html` from `@react-three/drei`, anchored above each character
 
 **Behaviour:**
 - Messages are scoped to the lobby — only players in this match see them
 - Chat persists for the duration of the match; cleared when lobby is destroyed
-- Visible alongside the combat HUD (bottom or side panel, collapsible)
 - Especially important for **team battles** (2v2) and **DLC co-op** (Janus fight)
 - In team mode, an option to toggle between "team only" and "all" chat
 
@@ -718,9 +919,11 @@ In free-for-all lobbies, players can **whisper** — send a private message to o
 
 | Component | Description |
 |-----------|-------------|
-| `ChatPanel.tsx` | Reusable chat panel (used in both city hub and lobby) |
+| `ChatToggleButton.tsx` | Corner button (💬) that opens/closes the chat overlay; shows notification dot on new messages |
+| `ChatOverlay.tsx` | Slide-in chat panel anchored to one screen edge; never covers action buttons |
 | `ChatMessage.tsx` | Single message row (player name + text + timestamp + whisper styling) |
-| `ChatInput.tsx` | Text input with target selector dropdown (All / team / specific player) and send button |
+| `ChatInput.tsx` | Text input with target selector dropdown (All / specific player) and Send button |
+| `SpeechBubble.tsx` | 3D speech bubble above a character's head (`Html` from drei); fades after ~3 seconds |
 
 ### 9.6 Backend Requirements
 
@@ -1045,7 +1248,74 @@ Recommendation: **Keep polling for alpha**, add SSE for event notifications only
 
 ## 13. Implementation Phases
 
-### Phase 1: Foundation
+> Phases are ordered by **alpha priority first**. Phases 1–3 must ship before alpha release. Phases 4–8 are post-alpha.
+
+---
+
+### Phase 1: Character Model & Table UI *(Alpha)*
+
+**Goal**: Angel-cherub model in scene; table-centric action buttons; no flat menu panel
+
+Frontend:
+- [ ] Integrate angel-cherub 3D model (`useGLTF` / `useFBX`) for all players
+- [ ] Sitting animation as default idle state in lobby
+- [ ] Death animation on player elimination
+- [ ] `PlayerButtons.tsx` — overlay buttons anchored to each character in 3D space (`Html` from drei)
+  - [ ] "Attack" button visible on each enemy character during choice phase
+  - [ ] "Defend" button on own character
+  - [ ] "Get Life", "Get Gold", "Upgrade Strength" buttons in a row below Defend on own character
+- [ ] `TheWell.tsx` — 3D well in center of table; clickable to submit Raid
+- [ ] Remove / replace old flat action menu panel
+- [ ] All button labels in English
+
+Backend:
+- [ ] No backend changes required for this phase
+
+### Phase 2: Combat Animation Polish *(Alpha)*
+
+**Goal**: Combat animations feel alive and satisfying; execution phase has dramatic blackout
+
+Frontend:
+- [ ] **Blackout execution phase**: fade to black when all players have submitted; audio plays during blackout; fade back in to reveal results
+- [ ] Attack animation on attacker model when attack resolves
+- [ ] Attack VFX: slash arc particle effect toward target
+- [ ] Camera shake on attack hit
+- [ ] Damage number popup (floats up, fades)
+- [ ] Defend VFX: shield dome on model when defend resolves
+- [ ] Death animation + dissolve / shatter effect
+- [ ] Victory pose + confetti + spotlight on winner
+- [ ] "Round X" title card with brief animated swoosh between rounds
+- [ ] Cinematic camera: brief cut to attacker → target on attack
+- [ ] Slow orbit around winner on game over
+- [ ] Round timer: 3D floating element above table, pulses red when ≤ 10s
+- [ ] Audio system: sounds for attack, defend, death, victory, timer warning; sequenced during blackout
+
+Backend:
+- [ ] No backend changes required for this phase
+
+### Phase 3: Lobby Chat *(Alpha)*
+
+**Goal**: Players can chat inside a lobby; speech bubbles appear above characters in scene
+
+Frontend:
+- [ ] `ChatToggleButton.tsx` — corner button (💬) with notification dot for new messages
+- [ ] `ChatOverlay.tsx` — slide-in panel anchored to screen edge, does not cover action buttons
+- [ ] `ChatMessage.tsx` — single message row (player name + text; whisper styled in italic)
+- [ ] `ChatInput.tsx` — text input + target dropdown (All / specific player) + Send button
+- [ ] `SpeechBubble.tsx` — 3D bubble above character (`Html` from drei); fades after ~3s; no bubble for whispers
+- [ ] Chat polling every 2–3 seconds via `GET /lobby/<id>/chat`
+- [ ] Auto-scroll to latest; player can scroll up to read history
+- [ ] Maximum 200 characters per message
+
+Backend:
+- [ ] Lobby chat stored in-memory (part of lobby state dict)
+- [ ] `GET /lobby/<id>/chat?player_name=X` — returns messages visible to this player (filters whispers)
+- [ ] `POST /lobby/<id>/chat` — body: `player_name`, `message`, optional `target_player`
+- [ ] Rate limiting: 1 message per 2 seconds per player
+
+---
+
+### Phase 4: Foundation — World Map & Cities *(post-alpha)*
 
 **Goal**: World map + cities + refactored navigation
 
@@ -1063,43 +1333,55 @@ Backend:
 - [ ] New endpoints: `GET /cities`, `GET /cities/<id>/leaderboards`
 - [ ] Begin modularizing `tjuvpakk_server.py` into route + model files
 
-### Phase 2: Chat
+### Phase 5: City Chat *(post-alpha)*
 
-**Goal**: City chat and lobby chat are functional
+**Goal**: City chat functional in City Hub
 
 Frontend:
-- [ ] `ChatPanel.tsx` — reusable chat component (city + lobby)
-- [ ] City chat integrated into City Hub screen
-- [ ] Lobby chat integrated into combat HUD
-- [ ] Team chat toggle in team battle mode
+- [ ] City chat integrated into City Hub screen (reuse `ChatPanel.tsx`)
 - [ ] Chat polling (every 2–3 seconds)
 
 Backend:
 - [ ] Create `chat_messages` table in Supabase
 - [ ] City chat endpoints (`GET /cities/<id>/chat`, `POST /cities/<id>/chat`)
-- [ ] Lobby chat (in-memory, part of lobby state)
-- [ ] Lobby chat endpoints (`GET /lobby/<id>/chat`, `POST /lobby/<id>/chat`)
 - [ ] Rate limiting (1 msg / 2s per player), message length limit (200 chars)
 
-### Phase 3: Events & Stats
+### Phase 6: Hades Raid *(Alpha — required)*
+
+**Goal**: Hades appears as a fixed raid boss — 8 HP, 2 attacks — defeated by trained AI targeting ~70% win rate solo, ~20% with 2 players
+
+Frontend:
+- [ ] `EventDetail.tsx` updated to render Hades Raid with distinct visual treatment (red/purple, skull icon)
+- [ ] `EventToast.tsx` — global notification on world map when a Hades Raid spawns
+- [ ] `HadesScene.tsx` — Underworld arena (cavern, river Styx, ghostly flames); Hades seated at head of table
+- [ ] Hades boss model / placeholder displayed opposite players
+- [ ] Post-raid reward screen shows Hades Relic chance
+
+Backend:
+- [ ] Hades Raid lobby type: players start with 10 HP, 1 weapon, 0 gold; Hades starts with 8 HP, 2 attacks (no scaling)
+- [ ] Hades AI module: trained via self-play iteration; target win rates ~70% (1 player), ~20% (2 players)
+- [ ] AI training harness: simulate Hades Raid rounds, evaluate win %, iterate until criteria are met
+- [ ] Hades Raid spawner: global, once every 30–60 min, only House of Hades city, max 1 active globally
+- [ ] Hades Relic reward: stored on player record
+- [ ] `raid_wins` stat increment on Hades kill
+
+### Phase 7: Events & Stats *(post-alpha)*
 
 **Goal**: Gremlin events work, city stats are tracked
 
 Frontend:
-- [ ] Event toast notifications on world map
 - [ ] Gremlin event detail screen + join flow
 - [ ] City leaderboard component
 - [ ] City stats on player profile
 - [ ] Per-city stat display in city hub
 
 Backend:
-- [ ] Create `events` table
 - [ ] Background gremlin event scheduler (spawn in random cities)
 - [ ] Event join endpoint (creates lobby linked to event)
 - [ ] City-scoped leaderboard query
 - [ ] Player city stats endpoint
 
-### Phase 4: Matchmaking
+### Phase 8: Matchmaking *(post-alpha)*
 
 **Goal**: Players can queue for BR and team matches
 
@@ -1116,24 +1398,15 @@ Backend:
 - [ ] Combat engine: team rules (no friendly fire, team win condition)
 - [ ] Matchmaking endpoints (join, leave, status)
 
-### Phase 5: Combat Overhaul
+### Phase 9: Per-City Arena Themes *(post-alpha)*
 
-**Goal**: Combat feels alive and cinematic
+**Goal**: Each city has a visually distinct arena environment
 
 Frontend:
-- [ ] New arena 3D scene (per-city themed — all 10 cities)
-- [ ] Player idle animations
-- [ ] Attack VFX (slash arc + camera shake)
-- [ ] Defend VFX (shield dome)
-- [ ] Damage number popups
-- [ ] Death dissolve effect
-- [ ] Victory celebration (confetti + spotlight)
-- [ ] Round title cards
-- [ ] Cinematic camera cuts on attacks
-- [ ] Redesigned combat HUD
+- [ ] New arena 3D scenes — all 10 cities (see section 8.7)
 - [ ] Audio system + minimum sound effects
 
-### Phase 6: DLC — Road to Olympus
+### Phase 10: DLC — Road to Olympus
 
 **Goal**: Purchasable tower climb with Styx, Janus (co-op), and Zeus
 
@@ -1155,7 +1428,7 @@ Backend:
 - [ ] Combat engine: apply equipped relic effects
 - [ ] Purchase verification (stub for alpha, real IAP later)
 
-### Phase 7: Platform Distribution
+### Phase 11: Platform Distribution
 
 **Goal**: Ship on iOS, Android, and Steam
 
