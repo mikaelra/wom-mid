@@ -574,7 +574,44 @@ Boss attack: Camera shakes
 Game over: Slow orbit around winner
 ```
 
-### 8.5 Audio Cues (Minimum Viable)
+### 8.5 Execution Phase — Blackout
+
+When **all players have submitted their choices**, the scene cuts to black before the results play out. This is the moment between choosing and seeing what happens.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                                                      │
+│                                                      │
+│                   ████████████                       │
+│                   (full black)                       │
+│                                                      │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+**Behaviour:**
+- Screen fades to **full black** — no HUD, no characters, no buttons
+- **Audio plays in the background**: sounds of what's happening (slash, impact, shield clang, death thud, etc.) play sequentially as the actions are resolved server-side
+- The sequence of sounds gives the players a sense of what happened before they see it
+- After the audio sequence (~1.5–3 seconds depending on how many events occurred), the screen fades back in
+- The scene is updated to reflect the round results: HP changes, dead characters in death pose, etc.
+- A brief round summary or floating damage numbers confirm what happened
+
+**Audio sequence during blackout (example):**
+```
+Round submitted by all →
+  [fade to black]
+  → slash sound (attack)
+  → impact sound (hit)
+  → shield clang (defend)
+  → low thud + echo (death)
+  [fade back to scene]
+  → round log updates + damage numbers float
+```
+
+This creates suspense and makes the resolution feel dramatic rather than instant.
+
+### 8.6 Audio Cues (Minimum Viable)
 
 | Event | Sound |
 |-------|-------|
@@ -586,7 +623,7 @@ Game over: Slow orbit around winner
 | Timer low | Ticking |
 | Event popup | Chime |
 
-### 8.6 Combat HUD Redesign — Table-Centric Interaction
+### 8.7 Combat HUD Redesign — Table-Centric Interaction
 
 **Core principle:** There is no separate action menu panel. All choices are made by clicking on 3D elements in the scene. Buttons float as overlays anchored to characters and the table.
 
@@ -649,7 +686,7 @@ Game over: Slow orbit around winner
 #### Button language
 All button labels are in **English** regardless of the player's language.
 
-### 8.7 Per-City Themed Arenas
+### 8.8 Per-City Themed Arenas
 
 Each of the 10 cities has a distinct arena environment:
 
@@ -666,7 +703,7 @@ Each of the 10 cities has a distinct arena environment:
 | Tokyo | Shinto shrine, cherry blossoms |
 | House of Hades | Cavern, ghostly flames, river Styx |
 
-### 8.8 Frontend Components
+### 8.9 Frontend Components
 
 | Component | Description |
 |-----------|-------------|
@@ -683,7 +720,7 @@ Each of the 10 cities has a distinct arena environment:
 | `DeathEffect.tsx` | Dissolve/shatter particle effect |
 | `VictoryEffect.tsx` | Confetti + spotlight for winner |
 
-### 8.9 Character Model — Angel Cherub
+### 8.10 Character Model — Angel Cherub
 
 > **Status: In progress.** A 3D-generated angel-cherub model is being created and will replace all placeholder player models.
 
@@ -746,24 +783,57 @@ Every city has a persistent, scrolling text chat visible in the **City Hub**. Th
 
 ### 9.2 Lobby Chat *(Alpha — required)*
 
-Every active lobby (PvP match, gremlin event, DLC encounter, boss raid) has its own chat. This is visible in the combat HUD and lets players communicate during the match.
+Every active lobby has its own chat. The chat is accessed via a **corner button** that opens an overlay — it does not live permanently in the HUD. When a player sends a message, a **speech bubble appears above their 3D character** in the scene so other players can see it without opening the overlay.
+
+#### Corner button + overlay
 
 ```
-┌──────────────────────────────────────────┐
-│ LOBBY CHAT                               │
-│                                           │
-│ P1: targeting P3 this round              │
-│ P2: I'll defend                          │
-│ You: raiding the boss                    │
-│                                           │
-│ [Type a message...]            [Send]     │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                 Round 3    ⏱ 0:24         [💬]      │  ← corner button
+│                                                      │
+│    (3D scene — characters, well, action buttons)    │
+│                                                      │
+└─────────────────────────────────────────────────────┘
 ```
+
+When [💬] is tapped, a chat overlay slides in **without covering the action buttons**:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 Round 3    ⏱ 0:24         [💬 ✕]   │
+│                                                      │
+│  (3D scene still visible behind overlay)            │
+│                                                      │
+│                        ┌──────────────────────────┐ │
+│                        │ CHAT               [✕]   │ │
+│                        │                           │ │
+│                        │ P1: attacking P3          │ │
+│                        │ P2: I'll defend           │ │
+│                        │ You: raiding the boss     │ │
+│                        │                           │ │
+│                        │ [Type...] [To: All▼][Send]│ │
+│                        └──────────────────────────┘ │
+│                                                      │
+│  [  Defend  ]   [Get Life] [Get Gold] [Upg. Str.]   │ ← still reachable
+└─────────────────────────────────────────────────────┘
+```
+
+- The overlay is **anchored to one side** (e.g., right edge) so it never covers your own character's action buttons
+- The overlay can be closed with [✕] or by clicking outside it
+- The corner button shows a **notification dot** when new messages arrive while the overlay is closed
+
+#### Speech bubbles in 3D
+
+When a player sends a message, a speech bubble appears above their character in the scene — visible to everyone without opening the overlay:
+
+- Bubble fades out after ~3 seconds
+- Shows the first ~30 characters; longer messages are truncated with "…"
+- Whispers do NOT show as speech bubbles (they are private)
+- `SpeechBubble.tsx` rendered using `Html` from `@react-three/drei`, anchored above each character
 
 **Behaviour:**
 - Messages are scoped to the lobby — only players in this match see them
 - Chat persists for the duration of the match; cleared when lobby is destroyed
-- Visible alongside the combat HUD (bottom or side panel, collapsible)
 - Especially important for **team battles** (2v2) and **DLC co-op** (Janus fight)
 - In team mode, an option to toggle between "team only" and "all" chat
 
@@ -803,9 +873,11 @@ In free-for-all lobbies, players can **whisper** — send a private message to o
 
 | Component | Description |
 |-----------|-------------|
-| `ChatPanel.tsx` | Reusable chat panel (used in both city hub and lobby) |
+| `ChatToggleButton.tsx` | Corner button (💬) that opens/closes the chat overlay; shows notification dot on new messages |
+| `ChatOverlay.tsx` | Slide-in chat panel anchored to one screen edge; never covers action buttons |
 | `ChatMessage.tsx` | Single message row (player name + text + timestamp + whisper styling) |
-| `ChatInput.tsx` | Text input with target selector dropdown (All / team / specific player) and send button |
+| `ChatInput.tsx` | Text input with target selector dropdown (All / specific player) and Send button |
+| `SpeechBubble.tsx` | 3D speech bubble above a character's head (`Html` from drei); fades after ~3 seconds |
 
 ### 9.6 Backend Requirements
 
@@ -1155,9 +1227,10 @@ Backend:
 
 ### Phase 2: Combat Animation Polish *(Alpha)*
 
-**Goal**: Combat animations feel alive and satisfying
+**Goal**: Combat animations feel alive and satisfying; execution phase has dramatic blackout
 
 Frontend:
+- [ ] **Blackout execution phase**: fade to black when all players have submitted; audio plays during blackout; fade back in to reveal results
 - [ ] Attack animation on attacker model when attack resolves
 - [ ] Attack VFX: slash arc particle effect toward target
 - [ ] Camera shake on attack hit
@@ -1169,22 +1242,24 @@ Frontend:
 - [ ] Cinematic camera: brief cut to attacker → target on attack
 - [ ] Slow orbit around winner on game over
 - [ ] Round timer: 3D floating element above table, pulses red when ≤ 10s
+- [ ] Audio system: sounds for attack, defend, death, victory, timer warning; sequenced during blackout
 
 Backend:
 - [ ] No backend changes required for this phase
 
 ### Phase 3: Lobby Chat *(Alpha)*
 
-**Goal**: Players can chat inside a lobby during the match
+**Goal**: Players can chat inside a lobby; speech bubbles appear above characters in scene
 
 Frontend:
-- [ ] `ChatPanel.tsx` — scrolling chat panel embedded in the combat HUD (collapsible)
-- [ ] `ChatMessage.tsx` — single message row (player name + text)
-- [ ] `ChatInput.tsx` — text input + Send button
-- [ ] Chat polling (every 2–3 seconds via `GET /lobby/<id>/chat`)
-- [ ] Auto-scroll to latest message; player can scroll up to read history
+- [ ] `ChatToggleButton.tsx` — corner button (💬) with notification dot for new messages
+- [ ] `ChatOverlay.tsx` — slide-in panel anchored to screen edge, does not cover action buttons
+- [ ] `ChatMessage.tsx` — single message row (player name + text; whisper styled in italic)
+- [ ] `ChatInput.tsx` — text input + target dropdown (All / specific player) + Send button
+- [ ] `SpeechBubble.tsx` — 3D bubble above character (`Html` from drei); fades after ~3s; no bubble for whispers
+- [ ] Chat polling every 2–3 seconds via `GET /lobby/<id>/chat`
+- [ ] Auto-scroll to latest; player can scroll up to read history
 - [ ] Maximum 200 characters per message
-- [ ] Whisper mode: target dropdown (All / specific player), whisper styled in italic + different colour
 
 Backend:
 - [ ] Lobby chat stored in-memory (part of lobby state dict)
