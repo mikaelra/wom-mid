@@ -268,23 +268,15 @@ The Hades Raid is the alpha's signature encounter. It spawns in the **House of H
 #### Starting conditions
 
 - **Each player:** 10 HP, 1 weapon, 0 gold — the same as any other match
-- **Hades:** 8 HP, 2 attacks per round (fixed, regardless of player count)
+- **Hades:** 8 HP, 2 attack damage (fixed, regardless of player count)
 
 There is no artificial scaling. More players win more easily simply because they deal more combined damage.
 
 #### Hades AI
 
-Hades is driven by a **trained AI**, not hand-written rules. The AI is trained via self-play iteration with the target win rates as criteria:
+For alpha, Hades uses the **existing rule-based boss AI** — the same system used by all bosses. He always attacks the strongest living player and upgrades his attack when he has enough gold. This is sufficient for a playable alpha experience.
 
-| Scenario | Target Hades win rate |
-|----------|----------------------|
-| 1 player | ~70% |
-| 2 players | ~20% |
-
-The AI iterates until it reliably hits these benchmarks. This means:
-- Solo feels genuinely hard — Hades has learned to exploit individual players
-- Two players tip the balance strongly in the players' favour
-- No hand-tuned logic; the difficulty curve is a natural outcome of the trained behaviour
+A trained AI (self-play, win-rate targets) is a post-alpha consideration and requires significant ML infrastructure that is out of scope for the initial release.
 
 #### Scene
 
