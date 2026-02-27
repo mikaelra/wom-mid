@@ -14,7 +14,6 @@ import WorldMapOverlay from '@/components/worldmap/WorldMapOverlay';
 import type { City } from '@/lib/cities';
 
 // Dynamically import heavy 3D models
-const Model = dynamic(() => import('../components/Model'), { ssr: false });
 const PlayerV1 = dynamic(() => import('../components/Playerv1'), { ssr: false });
 
 // ---------- Camera animator for the temple scene ----------
@@ -129,7 +128,6 @@ function TempleScene({ cityColor }: TempleSceneProps) {
       <color attach="background" args={[cityColor ? adjustSkyColor(cityColor) : '#87ceeb']} />
 
       <Mountain scale={150} position={[40, -282, 62]} />
-      <Model scale={1} position={[0, 3, 0]} />
       <Table position={TABLE_POSITION} scale={1.2} onClick={handleTableClick} />
 
       <PlayersAtTable show={showPlayer} />
