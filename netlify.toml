@@ -5,5 +5,12 @@
 [build.environment]
   NEXT_PUBLIC_BACKEND_URL = "https://tjuvpakk-backend.onrender.com"
 
+# Deploy previews are handled by the GitHub Actions pr-preview workflow,
+# which injects the correct NEXT_PUBLIC_BACKEND_URL before building.
+# Disable Netlify's automatic deploy previews to avoid duplicate deploys
+# with the wrong backend URL.
+[context.deploy-preview]
+  ignore = "exit 0"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"

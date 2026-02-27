@@ -1,0 +1,112 @@
+name: PR Preview Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+env:
+  PRODUCTION_BACKEND_URL: https://tjuvpakk-backend.onrender.com
+  PREVIEW_BACKEND_URL: https://tjuvpakk-backend-preview.onrender.com
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Determine backend URL
+        id: backend
+        run: |
+          BRANCH="${{ github.head_ref }}"
+
+          # Check if the backend repo has an open PR for this same branch
+          BACKEND_PR_COUNT=$(curl -sS \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/mikaelra/tjuvpakk-backend/pulls?state=open&head=mikaelra:${BRANCH}" \
+            | jq '. | length')
+
+          if [ "$BACKEND_PR_COUNT" -gt "0" ]; then
+            echo "Found backend PR for branch '$BRANCH' — using preview backend"
+            echo "url=${{ env.PREVIEW_BACKEND_URL }}" >> $GITHUB_OUTPUT
+            echo "source=preview (branch: ${BRANCH})" >> $GITHUB_OUTPUT
+          else
+            echo "No backend PR for branch '$BRANCH' — using production backend"
+            echo "url=${{ env.PRODUCTION_BACKEND_URL }}" >> $GITHUB_OUTPUT
+            echo "source=production" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build with correct backend URL
+        env:
+          NEXT_PUBLIC_BACKEND_URL: ${{ steps.backend.outputs.url }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: npx netlify-cli@latest build
+
+      - name: Deploy to Netlify
+        id: netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          RESULT=$(npx netlify-cli@latest deploy \
+            --alias "pr-${{ github.event.number }}" \
+            --message "PR #${{ github.event.number }} — ${{ github.head_ref }}" \
+            --json)
+          echo "$RESULT"
+          DEPLOY_URL=$(echo "$RESULT" | jq -r '.deploy_url')
+          echo "url=${DEPLOY_URL}" >> $GITHUB_OUTPUT
+
+      - name: Comment preview URLs on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const frontendUrl = '${{ steps.netlify.outputs.url }}';
+            const backendUrl = '${{ steps.backend.outputs.url }}';
+            const backendSource = '${{ steps.backend.outputs.source }}';
+
+            const body = [
+              '### 🌐 Frontend Preview Deployed',
+              '',
+              `**Frontend:** ${frontendUrl}`,
+              `**Backend:** ${backendUrl} (${backendSource})`,
+              '',
+              '_Updates automatically on new commits to this PR._',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Frontend Preview Deployed')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
