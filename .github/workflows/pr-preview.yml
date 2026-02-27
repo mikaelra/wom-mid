@@ -8,10 +8,6 @@ permissions:
   pull-requests: write
   contents: read
 
-env:
-  PRODUCTION_BACKEND_URL: https://tjuvpakk-backend.onrender.com
-  PREVIEW_BACKEND_URL: https://tjuvpakk-backend-preview.onrender.com
-
 jobs:
   deploy-preview:
     if: github.event.action != 'closed'
@@ -26,46 +22,72 @@ jobs:
 
       - name: Determine backend URL
         id: backend
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
           BRANCH="${{ github.head_ref }}"
+          PRODUCTION_URL="https://tjuvpakk-backend.onrender.com"
 
-          # Check if the backend repo has an open PR for this same branch
+          # Check if tjuvpakk-backend has an open PR for this same branch
           BACKEND_PR_COUNT=$(curl -sS \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/mikaelra/tjuvpakk-backend/pulls?state=open&head=mikaelra:${BRANCH}" \
             | jq '. | length')
 
           if [ "$BACKEND_PR_COUNT" -gt "0" ]; then
-            echo "Found backend PR for branch '$BRANCH' — using preview backend"
-            echo "url=${{ env.PREVIEW_BACKEND_URL }}" >> $GITHUB_OUTPUT
-            echo "source=preview (branch: ${BRANCH})" >> $GITHUB_OUTPUT
+            echo "Backend PR found for branch '$BRANCH' — looking up Render preview URL..."
+
+            # Poll the Render API for the preview service on this branch
+            BACKEND_URL=""
+            for i in $(seq 1 30); do
+              BACKEND_URL=$(curl -sS \
+                -H "Authorization: Bearer ${RENDER_API_KEY}" \
+                "https://api.render.com/v1/services?name=tjuvpakk-backend&limit=20" \
+                | jq -r --arg branch "$BRANCH" \
+                    '[.[] | select(.service.branch == $branch)] | .[0].service.serviceDetails.url // empty')
+
+              if [ -n "$BACKEND_URL" ]; then
+                echo "Found backend preview: $BACKEND_URL"
+                break
+              fi
+              echo "Attempt $i/30: backend preview not ready yet, waiting..."
+              sleep 15
+            done
+
+            if [ -z "$BACKEND_URL" ]; then
+              echo "Timed out waiting for backend preview — falling back to production"
+              BACKEND_URL="$PRODUCTION_URL"
+              echo "source=production (preview timed out)" >> $GITHUB_OUTPUT
+            else
+              echo "source=preview (branch: ${BRANCH})" >> $GITHUB_OUTPUT
+            fi
           else
             echo "No backend PR for branch '$BRANCH' — using production backend"
-            echo "url=${{ env.PRODUCTION_BACKEND_URL }}" >> $GITHUB_OUTPUT
+            BACKEND_URL="$PRODUCTION_URL"
             echo "source=production" >> $GITHUB_OUTPUT
           fi
+
+          echo "url=${BACKEND_URL}" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build with correct backend URL
-        env:
-          NEXT_PUBLIC_BACKEND_URL: ${{ steps.backend.outputs.url }}
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        run: npx netlify-cli@latest build
-
-      - name: Deploy to Netlify
+      - name: Build and deploy to Netlify
         id: netlify
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NEXT_PUBLIC_BACKEND_URL: ${{ steps.backend.outputs.url }}
         run: |
+          npx netlify-cli@latest build
+
           RESULT=$(npx netlify-cli@latest deploy \
             --alias "pr-${{ github.event.number }}" \
             --message "PR #${{ github.event.number }} — ${{ github.head_ref }}" \
             --json)
+
           echo "$RESULT"
           DEPLOY_URL=$(echo "$RESULT" | jq -r '.deploy_url')
           echo "url=${DEPLOY_URL}" >> $GITHUB_OUTPUT
@@ -82,7 +104,7 @@ jobs:
               '### 🌐 Frontend Preview Deployed',
               '',
               `**Frontend:** ${frontendUrl}`,
-              `**Backend:** ${backendUrl} (${backendSource})`,
+              `**Backend:** ${backendUrl} _(${backendSource})_`,
               '',
               '_Updates automatically on new commits to this PR._',
             ].join('\n');
