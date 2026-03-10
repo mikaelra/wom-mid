@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# World of Mythos — Frontend
+
+3D multiplayer turn-based strategy game frontend built with Next.js and React Three Fiber. Players battle around a table in sacred cities across a mythological world map.
+
+## Tech Stack
+
+- **Next.js 16** (App Router, Turbopack)
+- **React 19** + **TypeScript 5**
+- **React Three Fiber** / **Three.js** — 3D scenes and character models
+- **Tailwind CSS 4** — UI styling
+- **Netlify** — deployment
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js
+- A running backend server (see [Backend](#backend))
+
+### Install and Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Description | Default |
+|---|---|---|
+| `NEXT_PUBLIC_BACKEND_URL` | Backend API URL | `http://localhost:5000` |
 
-## Learn More
+### Scripts
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev    # Start dev server (Turbopack)
+npm run build  # Production build
+npm start      # Start production server
+npm run lint   # Run ESLint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/                    # Next.js pages (App Router)
+│   ├── page.tsx            # Home / World Map
+│   ├── lobby/[lobbyId]/    # Battle lobby
+│   ├── gremlin/[lobbyId]/  # Gremlin fight variant
+│   ├── vault/              # Artifact vault unlock
+│   ├── rules/              # Game rules
+│   ├── leaderboards/       # Player rankings
+│   ├── login/              # Authentication
+│   └── signup/
+├── components/
+│   ├── worldmap/           # 3D globe with city markers
+│   ├── lobby/              # Battle lobby scene + overlay
+│   ├── gremlin/            # Gremlin mode scene + overlay
+│   ├── home/               # Main menu overlay
+│   ├── Model.tsx           # Temple/arena 3D model
+│   ├── Playerv1.tsx        # Player character model
+│   ├── mountain.tsx        # Mountain backdrop
+│   ├── Table.tsx           # Game table
+│   └── ExplosionEffect.tsx # VFX
+├── lib/
+│   ├── api.ts              # Backend API client
+│   ├── cities.ts           # Sacred city definitions
+│   └── sceneConstants.ts   # 3D scene positioning
+├── types/
+│   └── game.ts             # TypeScript interfaces
+└── config.ts               # Backend URL config
 
-## Deploy on Vercel
+public/
+├── models/                 # 3D models (.glb)
+├── textures/               # Earth textures for world map
+└── images/                 # UI assets
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **3D World Map** — Interactive globe with 10 sacred cities, realistic Earth textures, and Fresnel atmospheric glow
+- **Battle Lobbies** — 2–4 players seated at a 3D table with animated character models
+- **Turn-Based Combat** — Resource gathering, attacking, defending, raiding, and deny mechanics
+- **Boss Raids** — Scheduled encounters against boss characters
+- **Gremlin Fights** — Alternate battle mode
+- **Vault System** — 8-digit code unlock for rare artifacts
+- **Leaderboards** — Player rankings
+- **Bot Support** — Add AI bots to fill lobby slots
+
+## Backend
+
+This frontend expects a backend API server. In production, the backend runs at `https://tjuvpakk-backend.onrender.com`. For local development, run the backend on port 5000 or set `NEXT_PUBLIC_BACKEND_URL` to point to your backend instance.
+
+## Deployment
+
+Deployed to Netlify with the Next.js plugin. Configuration is in `netlify.toml`.
