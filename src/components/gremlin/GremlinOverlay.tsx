@@ -128,8 +128,10 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
     );
   }
 
+  const showActions = !gameOver && isAlive && gameStarted;
+
   return (
-    <div className="absolute inset-0 flex items-end justify-center pb-4 sm:pb-8 pointer-events-none z-10">
+    <div className="absolute inset-0 pointer-events-none z-10">
       {/* Back button */}
       <div className="absolute top-4 left-4 pointer-events-auto z-20">
         <Link href="/" className="text-green-300 hover:underline font-medium drop-shadow-md">
@@ -156,10 +158,94 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
-      {/* Main combat panel at bottom */}
-      <div className="pointer-events-auto w-full max-w-2xl mx-4">
+      {/* Attack button — floats over the gremlin */}
+      {showActions && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{ top: '28%', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          <button
+            type="button"
+            onClick={() => handleAction('attack')}
+            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
+              action === 'attack'
+                ? 'bg-red-600 text-white border-red-400'
+                : 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90'
+            }`}
+          >
+            ⚔ ATTACK
+          </button>
+        </div>
+      )}
+
+      {/* "The Well" raid button — center of the table */}
+      {showActions && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{ top: '46%', left: '50%', transform: 'translate(-50%, -50%)' }}
+        >
+          <button
+            type="button"
+            onClick={() => handleAction('raid')}
+            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
+              action === 'raid'
+                ? 'bg-purple-600 text-white border-purple-400'
+                : 'bg-purple-900/80 text-purple-200 border-purple-700 hover:bg-purple-800/90'
+            }`}
+          >
+            🏴 The Well
+          </button>
+        </div>
+      )}
+
+      {/* Defend button — on the player character */}
+      {showActions && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{ top: '61%', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          <button
+            type="button"
+            onClick={() => handleAction('defend')}
+            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
+              action === 'defend'
+                ? 'bg-blue-600 text-white border-blue-400'
+                : 'bg-blue-900/80 text-blue-200 border-blue-700 hover:bg-blue-800/90'
+            }`}
+          >
+            🛡 DEFEND
+          </button>
+        </div>
+      )}
+
+      {/* Stats — three individual floating windows below the player character */}
+      {myPlayer && !myPlayer.spectator && (
+        <div
+          className="absolute flex gap-2 pointer-events-none"
+          style={{ top: '68%', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 border border-red-500/50 text-center min-w-[62px]">
+            <p className="text-gray-400 text-xs uppercase tracking-wide">HP</p>
+            <p className="text-red-400 font-bold text-xl leading-tight">{myPlayer.hp}</p>
+            <p className="text-red-500/70 text-xs">❤</p>
+          </div>
+          <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 border border-yellow-500/50 text-center min-w-[62px]">
+            <p className="text-gray-400 text-xs uppercase tracking-wide">Coins</p>
+            <p className="text-yellow-400 font-bold text-xl leading-tight">{myPlayer.coins}</p>
+            <p className="text-yellow-500/70 text-xs">💰</p>
+          </div>
+          <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 border border-blue-500/50 text-center min-w-[62px]">
+            <p className="text-gray-400 text-xs uppercase tracking-wide">ATK</p>
+            <p className="text-blue-400 font-bold text-xl leading-tight">{myPlayer.attackDamage}</p>
+            <p className="text-blue-500/70 text-xs">⚔</p>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom panel — round info, resources, messages, game over */}
+      <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 pointer-events-auto">
         <div className="bg-black/80 backdrop-blur-sm rounded-xl border border-green-500/30 p-4 sm:p-6 text-white">
-          {/* Round info */}
+          {/* Round info + timer */}
           <div className="flex justify-between items-center mb-3">
             <span className="text-green-400 font-semibold">Round {state.round}</span>
             {secondsLeft !== null && secondsLeft <= 20 && !gameOver && (
@@ -169,53 +255,27 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
             )}
           </div>
 
-          {/* Player stats */}
-          {myPlayer && !myPlayer.spectator && (
-            <div className="flex gap-4 mb-4 text-sm flex-wrap">
-              <span>❤ <span className="font-semibold text-red-400">{myPlayer.hp}</span></span>
-              <span>💰 <span className="font-semibold text-yellow-400">{myPlayer.coins}</span></span>
-              <span>⚔ <span className="font-semibold text-blue-400">{myPlayer.attackDamage}</span></span>
-            </div>
-          )}
-
-          {/* Combat controls */}
+          {/* Resource buttons */}
           {!gameOver && isAlive && gameStarted && (
-            <>
-              <div className="mb-3">
-                <p className="text-green-300 text-xs font-semibold mb-2 uppercase tracking-wide">Resource</p>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: 'gain_hp', label: 'Get ❤' },
-                    { id: 'gain_coin', label: 'Get 💰' },
-                    { id: 'gain_attack', label: 'Buy ⚔' },
-                  ].map((res) => (
-                    <button
-                      key={res.id}
-                      type="button"
-                      onClick={() => handleResource(res.id)}
-                      className={`${btn} text-sm ${resource === res.id ? 'bg-green-600 text-white border-green-400' : 'bg-gray-700 text-gray-200 border-gray-500'}`}
-                    >
-                      {res.label}
-                    </button>
-                  ))}
-                </div>
+            <div className="mb-3">
+              <p className="text-green-300 text-xs font-semibold mb-2 uppercase tracking-wide">Resource</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'gain_hp', label: 'Get ❤' },
+                  { id: 'gain_coin', label: 'Get 💰' },
+                  { id: 'gain_attack', label: 'Buy ⚔' },
+                ].map((res) => (
+                  <button
+                    key={res.id}
+                    type="button"
+                    onClick={() => handleResource(res.id)}
+                    className={`${btn} text-sm ${resource === res.id ? 'bg-green-600 text-white border-green-400' : 'bg-gray-700 text-gray-200 border-gray-500'}`}
+                  >
+                    {res.label}
+                  </button>
+                ))}
               </div>
-              <div className="mb-3">
-                <p className="text-green-300 text-xs font-semibold mb-2 uppercase tracking-wide">Action</p>
-                <div className="flex flex-wrap gap-2">
-                  {['attack', 'defend', 'raid'].map((act) => (
-                    <button
-                      key={act}
-                      type="button"
-                      onClick={() => handleAction(act)}
-                      className={`${btn} text-sm ${action === act ? 'bg-green-600 text-white border-green-400' : 'bg-gray-700 text-gray-200 border-gray-500'}`}
-                    >
-                      {act === 'attack' ? '⚔ ATTACK' : act === 'defend' ? '🛡 DEFEND' : '🏴 RAID'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
+            </div>
           )}
 
           {/* Messages */}
