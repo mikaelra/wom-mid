@@ -1,23 +1,27 @@
 'use client';
 
 import { useThree, useFrame } from '@react-three/fiber';
-import { Environment } from '@react-three/drei';
-import { useRef, useMemo } from 'react';
+import { Environment, useGLTF } from '@react-three/drei';
+import { useRef, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import type { LobbyState } from '@/types/game';
 
-// Camera that settles into a forest clearing view
+// Table center; gremlin sits on far side (−Z), player/cherub on near side (+Z)
+const GREMLIN_POS: [number, number, number] = [0, 0.4, -1.15];
+const CHERUB_POS: [number, number, number] = [0, 0.4, 1.15];
+
+// Camera that frames the battle table
 function ForestCamera() {
   const { camera, size } = useThree();
   const pos = useRef(new THREE.Vector3(0, 8, 12));
 
   useFrame(() => {
     const aspect = size.width / size.height;
-    const targetZ = aspect > 1.2 ? 6 : 7;
-    const target = new THREE.Vector3(0, 2.5, targetZ);
+    const targetZ = aspect > 1.2 ? 5 : 6;
+    const target = new THREE.Vector3(0, 2.0, targetZ);
     pos.current.lerp(target, 0.03);
     camera.position.copy(pos.current);
-    camera.lookAt(0, 1.2, 0);
+    camera.lookAt(0, 0.9, 0);
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = aspect > 1.5 ? 60 : 55;
       camera.updateProjectionMatrix();
@@ -31,12 +35,10 @@ function ForestCamera() {
 function Tree({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      {/* Trunk */}
       <mesh position={[0, 1, 0]} castShadow>
         <cylinderGeometry args={[0.15, 0.2, 2, 8]} />
         <meshStandardMaterial color="#5d3a1a" />
       </mesh>
-      {/* Foliage layers */}
       <mesh position={[0, 2.5, 0]} castShadow>
         <coneGeometry args={[1.0, 1.5, 8]} />
         <meshStandardMaterial color="#1a5c1a" />
@@ -53,17 +55,97 @@ function Tree({ position }: { position: [number, number, number] }) {
   );
 }
 
-// The Gremlin character - a little green creature
-function GremlinModel({ alive, hp }: { alive: boolean; hp: number }) {
+// Placeholder battle table (simple geometry, real model TBD)
+function BattleTable() {
+  return (
+    <group>
+      {/* Top */}
+      <mesh position={[0, 0.84, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.9, 0.9, 0.08, 24]} />
+        <meshStandardMaterial color="#6b3a1f" roughness={0.8} />
+      </mesh>
+      {/* Leg */}
+      <mesh position={[0, 0.42, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.1, 0.8, 8]} />
+        <meshStandardMaterial color="#5a3018" roughness={0.9} />
+      </mesh>
+      {/* Base */}
+      <mesh position={[0, 0.06, 0]}>
+        <cylinderGeometry args={[0.35, 0.35, 0.06, 8]} />
+        <meshStandardMaterial color="#5a3018" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+// Tree-stump seat
+function Stump({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.2, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.22, 0.26, 0.4, 10]} />
+        <meshStandardMaterial color="#5d3a1a" roughness={0.95} />
+      </mesh>
+      {/* Seat ring */}
+      <mesh position={[0, 0.41, 0]}>
+        <cylinderGeometry args={[0.22, 0.22, 0.02, 10]} />
+        <meshStandardMaterial color="#4a2e14" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+// Player character — cherub GLB model
+function CherubModel({
+  position,
+  rotation,
+}: {
+  position: [number, number, number];
+  rotation?: [number, number, number];
+}) {
+  const { scene } = useGLTF('/models/cherub-v01.glb');
+  const clone = useMemo(() => scene.clone(), [scene]);
   const groupRef = useRef<THREE.Group>(null!);
-  const bounceRef = useRef(0);
+  const bobRef = useRef(0);
+
+  useEffect(() => {
+    clone.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+      }
+    });
+  }, [clone]);
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    bobRef.current += delta * 1.5;
+    groupRef.current.position.y = position[1] + Math.sin(bobRef.current) * 0.05;
+  });
+
+  return (
+    <group ref={groupRef} position={position} rotation={rotation}>
+      <primitive object={clone} scale={0.5} />
+    </group>
+  );
+}
+
+// The Gremlin character — procedural geometry, seated on far side
+function GremlinModel({
+  alive,
+  position,
+}: {
+  alive: boolean;
+  position: [number, number, number];
+}) {
+  const groupRef = useRef<THREE.Group>(null!);
+  const bobRef = useRef(0);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     if (alive) {
-      bounceRef.current += delta * 3;
-      groupRef.current.position.y = Math.sin(bounceRef.current) * 0.1 + 0.05;
-      groupRef.current.rotation.y += delta * 0.5;
+      bobRef.current += delta * 2.5;
+      groupRef.current.position.y = position[1] + Math.sin(bobRef.current) * 0.06 + 0.05;
     }
   });
 
@@ -71,7 +153,8 @@ function GremlinModel({ alive, hp }: { alive: boolean; hp: number }) {
   const eyeColor = alive ? '#ff4444' : '#333333';
 
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
+    // rotation Y = Math.PI so eyes (at +Z on body) face toward the cherub/player
+    <group ref={groupRef} position={position} rotation={[0, Math.PI, 0]}>
       {/* Body */}
       <mesh position={[0, 0.55, 0]} castShadow>
         <capsuleGeometry args={[0.3, 0.4, 8, 16]} />
@@ -95,12 +178,20 @@ function GremlinModel({ alive, hp }: { alive: boolean; hp: number }) {
       {/* Left eye */}
       <mesh position={[-0.12, 1.2, 0.25]}>
         <sphereGeometry args={[0.07, 8, 8]} />
-        <meshStandardMaterial color={eyeColor} emissive={alive ? '#ff0000' : '#000'} emissiveIntensity={alive ? 0.5 : 0} />
+        <meshStandardMaterial
+          color={eyeColor}
+          emissive={alive ? '#ff0000' : '#000'}
+          emissiveIntensity={alive ? 0.5 : 0}
+        />
       </mesh>
       {/* Right eye */}
       <mesh position={[0.12, 1.2, 0.25]}>
         <sphereGeometry args={[0.07, 8, 8]} />
-        <meshStandardMaterial color={eyeColor} emissive={alive ? '#ff0000' : '#000'} emissiveIntensity={alive ? 0.5 : 0} />
+        <meshStandardMaterial
+          color={eyeColor}
+          emissive={alive ? '#ff0000' : '#000'}
+          emissiveIntensity={alive ? 0.5 : 0}
+        />
       </mesh>
       {/* Left arm */}
       <mesh position={[-0.4, 0.5, 0]} rotation={[0, 0, -0.3]} castShadow>
@@ -159,29 +250,28 @@ type GremlinSceneProps = {
 export default function GremlinScene({ state }: GremlinSceneProps) {
   const gremlin = state?.players.find((p) => p.gremlin || p.boss);
   const gremlinAlive = gremlin ? gremlin.hp > 0 : true;
-  const gremlinHp = gremlin?.hp ?? 5;
 
-  // Fixed tree positions around the clearing
   const trees = useMemo(
-    () => [
-      [-4, 0, -3] as [number, number, number],
-      [-3, 0, -5] as [number, number, number],
-      [-5.5, 0, -1] as [number, number, number],
-      [-2, 0, -6] as [number, number, number],
-      [4, 0, -3] as [number, number, number],
-      [3, 0, -5] as [number, number, number],
-      [5.5, 0, -1] as [number, number, number],
-      [2, 0, -6] as [number, number, number],
-      [-5, 0, 2] as [number, number, number],
-      [5, 0, 2] as [number, number, number],
-      [-3.5, 0, 4] as [number, number, number],
-      [3.5, 0, 4] as [number, number, number],
-      [-6, 0, -4] as [number, number, number],
-      [6, 0, -4] as [number, number, number],
-      [0, 0, -7] as [number, number, number],
-      [-1, 0, -8] as [number, number, number],
-      [1.5, 0, -7.5] as [number, number, number],
-    ],
+    () =>
+      [
+        [-4, 0, -3],
+        [-3, 0, -5],
+        [-5.5, 0, -1],
+        [-2, 0, -6],
+        [4, 0, -3],
+        [3, 0, -5],
+        [5.5, 0, -1],
+        [2, 0, -6],
+        [-5, 0, 2],
+        [5, 0, 2],
+        [-3.5, 0, 4],
+        [3.5, 0, 4],
+        [-6, 0, -4],
+        [6, 0, -4],
+        [0, 0, -7],
+        [-1, 0, -8],
+        [1.5, 0, -7.5],
+      ] as [number, number, number][],
     []
   );
 
@@ -192,9 +282,9 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
       {/* Lighting */}
       <ambientLight intensity={0.3} />
       <directionalLight position={[5, 10, 5]} intensity={0.8} castShadow color="#ffffcc" />
-      <pointLight position={[0, 3, 0]} intensity={0.4} color="#88ff88" />
+      <pointLight position={[0, 2, 0]} intensity={0.5} color="#88ff88" />
 
-      {/* Dark green forest sky */}
+      {/* Dark forest sky + fog */}
       <color attach="background" args={['#0a2a0a']} />
       <fog attach="fog" args={['#0a2a0a', 8, 20]} />
 
@@ -204,7 +294,7 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
         <meshStandardMaterial color="#1a3a1a" />
       </mesh>
 
-      {/* Clearing patch (lighter ground) */}
+      {/* Clearing patch */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
         <circleGeometry args={[3, 32]} />
         <meshStandardMaterial color="#2a4a2a" />
@@ -225,10 +315,23 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
       <Mushroom position={[1.2, 0, -0.3]} />
       <Mushroom position={[0.3, 0, 1.8]} />
 
-      {/* The Gremlin */}
-      <GremlinModel alive={gremlinAlive} hp={gremlinHp} />
+      {/* Battle table (placeholder) */}
+      <BattleTable />
+
+      {/* Seats */}
+      <Stump position={[0, 0, -1.15]} />
+      <Stump position={[0, 0, 1.15]} />
+
+      {/* Gremlin — far side of table, facing the player */}
+      <GremlinModel alive={gremlinAlive} position={GREMLIN_POS} />
+
+      {/* Player — cherub model, near side of table, facing the gremlin */}
+      <CherubModel position={CHERUB_POS} rotation={[0, Math.PI, 0]} />
 
       <Environment preset="forest" />
     </>
   );
 }
+
+// Preload cherub model
+useGLTF.preload('/models/cherub-v01.glb');
