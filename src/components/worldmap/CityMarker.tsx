@@ -7,6 +7,66 @@ import * as THREE from 'three';
 import type { City } from '@/lib/cities';
 import { latLngToVec3 } from '@/lib/cities';
 
+// Tiny procedural gremlin that sits on top of the Gremlin's Lair pin
+function GremlinPinFigure() {
+  const ref = useRef<THREE.Group>(null!);
+  const t = useRef(0);
+
+  useFrame((_, delta) => {
+    t.current += delta * 2.5;
+    if (ref.current) {
+      ref.current.position.y = 0.28 + Math.sin(t.current) * 0.018;
+      ref.current.rotation.y += delta * 0.8;
+    }
+  });
+
+  const green = '#2ecc40';
+  const red = '#ff4444';
+
+  return (
+    <group ref={ref} position={[0, 0.28, 0]} scale={0.13}>
+      {/* Body */}
+      <mesh position={[0, 0.55, 0]}>
+        <capsuleGeometry args={[0.3, 0.4, 8, 16]} />
+        <meshStandardMaterial color={green} emissive={green} emissiveIntensity={0.4} />
+      </mesh>
+      {/* Head */}
+      <mesh position={[0, 1.15, 0]}>
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshStandardMaterial color={green} emissive={green} emissiveIntensity={0.4} />
+      </mesh>
+      {/* Left ear */}
+      <mesh position={[-0.3, 1.4, 0]} rotation={[0, 0, -0.5]}>
+        <coneGeometry args={[0.1, 0.3, 6]} />
+        <meshStandardMaterial color={green} />
+      </mesh>
+      {/* Right ear */}
+      <mesh position={[0.3, 1.4, 0]} rotation={[0, 0, 0.5]}>
+        <coneGeometry args={[0.1, 0.3, 6]} />
+        <meshStandardMaterial color={green} />
+      </mesh>
+      {/* Eyes */}
+      <mesh position={[-0.12, 1.2, 0.25]}>
+        <sphereGeometry args={[0.07, 8, 8]} />
+        <meshStandardMaterial color={red} emissive={red} emissiveIntensity={1.2} toneMapped={false} />
+      </mesh>
+      <mesh position={[0.12, 1.2, 0.25]}>
+        <sphereGeometry args={[0.07, 8, 8]} />
+        <meshStandardMaterial color={red} emissive={red} emissiveIntensity={1.2} toneMapped={false} />
+      </mesh>
+      {/* Arms */}
+      <mesh position={[-0.4, 0.55, 0]} rotation={[0, 0, -0.4]}>
+        <capsuleGeometry args={[0.08, 0.28, 4, 8]} />
+        <meshStandardMaterial color={green} />
+      </mesh>
+      <mesh position={[0.4, 0.55, 0]} rotation={[0, 0, 0.4]}>
+        <capsuleGeometry args={[0.08, 0.28, 4, 8]} />
+        <meshStandardMaterial color={green} />
+      </mesh>
+    </group>
+  );
+}
+
 interface CityMarkerProps {
   city: City;
   globeRadius: number;
@@ -65,16 +125,20 @@ export default function CityMarker({ city, globeRadius, onClick }: CityMarkerPro
         <meshStandardMaterial color={city.color} emissive={city.color} emissiveIntensity={hovered ? 1.2 : 0.5} />
       </mesh>
 
-      {/* Glowing sphere on top */}
-      <mesh position={[0, 0.32, 0]}>
-        <sphereGeometry args={[hovered ? 0.1 : 0.07, 16, 16]} />
-        <meshStandardMaterial
-          color={city.color}
-          emissive={city.color}
-          emissiveIntensity={hovered ? 2 : 1}
-          toneMapped={false}
-        />
-      </mesh>
+      {/* Glowing sphere on top — replaced by gremlin figure for Gremlin's Lair */}
+      {city.isGremlin ? (
+        <GremlinPinFigure />
+      ) : (
+        <mesh position={[0, 0.32, 0]}>
+          <sphereGeometry args={[hovered ? 0.1 : 0.07, 16, 16]} />
+          <meshStandardMaterial
+            color={city.color}
+            emissive={city.color}
+            emissiveIntensity={hovered ? 2 : 1}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
 
       {/* Pulsing glow ring at base */}
       <mesh ref={glowRef} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
