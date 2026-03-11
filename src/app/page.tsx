@@ -170,9 +170,13 @@ function adjustSkyColor(hex: string): string {
 // ========== Main page component ==========
 export default function Page() {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [showGremlinPopup, setShowGremlinPopup] = useState(false);
+  const [gremlinUsername, setGremlinUsername] = useState('');
+  const [gremlinError, setGremlinError] = useState('');
+  const [gremlinLoading, setGremlinLoading] = useState(false);
   const router = useRouter();
 
-  const handleCityClick = useCallback(async (city: City) => {
+  const handleCityClick = useCallback((city: City) => {
     if (city.isVault) {
       router.push('/vault');
       return;
@@ -180,19 +184,38 @@ export default function Page() {
     if (city.isGremlin) {
       const playerName = typeof window !== 'undefined' ? localStorage.getItem('playerName') : null;
       if (!playerName) {
-        alert('You must enter a name to fight the Gremlin.');
+        setGremlinUsername('');
+        setGremlinError('');
+        setShowGremlinPopup(true);
         return;
       }
-      try {
-        const data = await createGremlinLobby(playerName);
-        router.push(`/gremlin/${data.lobby_id}`);
-      } catch (err) {
-        alert(err instanceof Error ? err.message : 'Failed to enter the forest.');
-      }
+      createGremlinLobby(playerName)
+        .then((data) => router.push(`/gremlin/${data.lobby_id}`))
+        .catch((err) => alert(err instanceof Error ? err.message : 'Failed to enter the forest.'));
       return;
     }
     setSelectedCity(city);
   }, [router]);
+
+  const handleGremlinJoin = useCallback(async () => {
+    const trimmed = gremlinUsername.trim();
+    if (!trimmed) {
+      setGremlinError('Please enter a username.');
+      return;
+    }
+    setGremlinError('');
+    setGremlinLoading(true);
+    try {
+      const data = await createGremlinLobby(trimmed);
+      if (typeof window !== 'undefined') localStorage.setItem('playerName', trimmed);
+      setShowGremlinPopup(false);
+      router.push(`/gremlin/${data.lobby_id}`);
+    } catch (err) {
+      setGremlinError(err instanceof Error ? err.message : 'Failed to enter the forest.');
+    } finally {
+      setGremlinLoading(false);
+    }
+  }, [gremlinUsername, router]);
 
   const handleBackToMap = useCallback(() => {
     setSelectedCity(null);
@@ -206,6 +229,51 @@ export default function Page() {
         <Canvas camera={{ position: [0, 2, 7], fov: 50 }}>
           <WorldMap onCityClick={handleCityClick} />
         </Canvas>
+
+        {/* Gremlin's Lair login popup */}
+        {showGremlinPopup && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            onClick={() => setShowGremlinPopup(false)}
+          >
+            <div
+              className="bg-gray-900 border border-green-700/60 text-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-bold mb-1 text-green-400">Enter the Gremlin&apos;s Lair</h2>
+              <p className="text-sm text-white/60 mb-4">Choose a battle name to join the fight.</p>
+              <input
+                type="text"
+                placeholder="Your battle name"
+                value={gremlinUsername}
+                onChange={(e) => setGremlinUsername(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleGremlinJoin()}
+                autoFocus
+                className="w-full p-2 rounded-md bg-gray-800 border border-green-700/50 text-white placeholder-white/30 focus:outline-none focus:border-green-500 mb-3"
+              />
+              {gremlinError && (
+                <p className="text-red-400 text-sm mb-3">{gremlinError}</p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleGremlinJoin}
+                  disabled={gremlinLoading}
+                  className="flex-1 py-2 rounded-lg bg-green-700 hover:bg-green-600 font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {gremlinLoading ? 'Entering...' : 'Join Battle'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowGremlinPopup(false)}
+                  className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
