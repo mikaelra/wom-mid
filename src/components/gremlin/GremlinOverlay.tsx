@@ -232,28 +232,6 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       </div>
 
-      {/* Gremlin name and HP bar — beside the gremlin character (top half, right of center) */}
-      {gremlin && (
-        <div
-          className="absolute pointer-events-auto"
-          style={{ top: '20%', left: 'calc(50% + 120px)' }}
-        >
-          <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
-            <p className="text-green-400 font-bold text-sm">{gremlin.name}</p>
-            <p className="text-gray-300 text-xs">{gremlin.title}</p>
-            <div className="mt-1 w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 transition-all duration-500 rounded-full"
-                style={{ width: `${Math.max(0, (gremlin.hp / 5) * 100)}%` }}
-              />
-            </div>
-            <p className="text-green-300 text-xs mt-1">
-              {Math.max(0, gremlin.hp)} / 5 HP
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Attack button — floats over the gremlin */}
       {showActions && (
         <div
@@ -274,6 +252,28 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
+      {/* Gremlin name and HP bar — between attack and well, right of center */}
+      {gremlin && (
+        <div
+          className="absolute"
+          style={{ top: '37%', left: 'calc(50% + 120px)', transform: 'translateY(-50%)' }}
+        >
+          <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
+            <p className="text-green-400 font-bold text-sm">{gremlin.name}</p>
+            <p className="text-gray-300 text-xs">{gremlin.title}</p>
+            <div className="mt-1 w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 transition-all duration-500 rounded-full"
+                style={{ width: `${Math.max(0, (gremlin.hp / 5) * 100)}%` }}
+              />
+            </div>
+            <p className="text-green-300 text-xs mt-1">
+              {Math.max(0, gremlin.hp)} / 5 HP
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* "The Well" raid button — center of the table */}
       {showActions && (
         <div
@@ -291,6 +291,20 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
           >
             🏴 The Well
           </button>
+        </div>
+      )}
+
+      {/* Player nametag — between well and defend, right of center */}
+      {myPlayer && (
+        <div
+          className="absolute"
+          style={{ top: '53%', left: 'calc(50% + 120px)', transform: 'translateY(-50%)' }}
+        >
+          <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-center border border-blue-500/30">
+            <p className="text-blue-200 font-bold text-sm">
+              {state.raidwinner === playerName ? '👑 ' : ''}{playerName}
+            </p>
+          </div>
         </div>
       )}
 
