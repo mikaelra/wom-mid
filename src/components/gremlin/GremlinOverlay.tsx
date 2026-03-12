@@ -139,24 +139,52 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </Link>
       </div>
 
-      {/* Gremlin HP bar at top */}
-      {gremlin && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-auto z-20">
-          <div className="bg-black/70 backdrop-blur-sm rounded-xl px-6 py-3 text-center border border-green-500/30">
-            <p className="text-green-400 font-bold text-lg">{gremlin.name}</p>
-            <p className="text-gray-300 text-sm">{gremlin.title}</p>
-            <div className="mt-2 w-48 h-3 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 transition-all duration-500 rounded-full"
-                style={{ width: `${Math.max(0, (gremlin.hp / 5) * 100)}%` }}
-              />
-            </div>
-            <p className="text-green-300 text-sm mt-1">
-              {Math.max(0, gremlin.hp)} / 5 HP
-            </p>
+      {/* Round messages panel at top */}
+      <div className="absolute top-12 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 pointer-events-auto z-20">
+        <div className="bg-black/80 backdrop-blur-sm rounded-xl border border-green-500/30 p-3 sm:p-4 text-white">
+          {/* Round info + timer */}
+          <div className="flex justify-between items-center">
+            <span className="text-green-400 font-semibold">Round {state.round}</span>
+            {secondsLeft !== null && secondsLeft <= 20 && !gameOver && (
+              <span className={`font-semibold ${secondsLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
+                {secondsLeft}s
+              </span>
+            )}
           </div>
+
+          {/* Messages */}
+          {messages.length > 0 && (
+            <div className="mt-2 max-h-28 overflow-y-auto border-t border-green-500/20 pt-2">
+              <ul className="text-sm text-gray-300 space-y-1">
+                {messages.map((m, i) => (
+                  <li key={i} className="text-green-200">{Array.isArray(m) ? m.join(' ') : m}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Game Over */}
+          {gameOver && (
+            <div className="mt-3 text-center">
+              <p className="text-xl font-bold mb-2">
+                {state.winner === playerName ? (
+                  <span className="text-green-400">You defeated the Gremlin!</span>
+                ) : gremlin && state.winner === gremlin.name ? (
+                  <span className="text-red-400">The Gremlin got you...</span>
+                ) : (
+                  <span className="text-yellow-400">Game Over! {state.winner} wins!</span>
+                )}
+              </p>
+              <Link
+                href="/"
+                className="text-green-400 hover:underline font-medium"
+              >
+                ← Return to Home
+              </Link>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Attack button — floats over the gremlin */}
       {showActions && (
@@ -218,6 +246,28 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
+      {/* Gremlin name and HP bar — beside the player character */}
+      {gremlin && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{ top: '61%', left: 'calc(50% + 160px)' }}
+        >
+          <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
+            <p className="text-green-400 font-bold text-sm">{gremlin.name}</p>
+            <p className="text-gray-300 text-xs">{gremlin.title}</p>
+            <div className="mt-1 w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 transition-all duration-500 rounded-full"
+                style={{ width: `${Math.max(0, (gremlin.hp / 5) * 100)}%` }}
+              />
+            </div>
+            <p className="text-green-300 text-xs mt-1">
+              {Math.max(0, gremlin.hp)} / 5 HP
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats — clickable resource windows below the player character */}
       {myPlayer && !myPlayer.spectator && (
         <div
@@ -272,52 +322,6 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
-      {/* Bottom panel — round info, resources, messages, game over */}
-      <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 pointer-events-auto">
-        <div className="bg-black/80 backdrop-blur-sm rounded-xl border border-green-500/30 p-4 sm:p-6 text-white">
-          {/* Round info + timer */}
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-green-400 font-semibold">Round {state.round}</span>
-            {secondsLeft !== null && secondsLeft <= 20 && !gameOver && (
-              <span className={`font-semibold ${secondsLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
-                {secondsLeft}s
-              </span>
-            )}
-          </div>
-
-          {/* Messages */}
-          {messages.length > 0 && (
-            <div className="mt-3 max-h-32 overflow-y-auto border-t border-green-500/20 pt-3">
-              <ul className="text-sm text-gray-300 space-y-1">
-                {messages.map((m, i) => (
-                  <li key={i} className="text-green-200">{Array.isArray(m) ? m.join(' ') : m}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Game Over */}
-          {gameOver && (
-            <div className="mt-4 text-center">
-              <p className="text-xl font-bold mb-3">
-                {state.winner === playerName ? (
-                  <span className="text-green-400">You defeated the Gremlin!</span>
-                ) : gremlin && state.winner === gremlin.name ? (
-                  <span className="text-red-400">The Gremlin got you...</span>
-                ) : (
-                  <span className="text-yellow-400">Game Over! {state.winner} wins!</span>
-                )}
-              </p>
-              <Link
-                href="/"
-                className="text-green-400 hover:underline font-medium"
-              >
-                ← Return to Home
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
