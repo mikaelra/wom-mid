@@ -298,7 +298,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {myPlayer && (
         <div
           className="absolute"
-          style={{ top: '53%', left: 'calc(50% + 120px)', transform: 'translateY(-50%)' }}
+          style={{ top: '53%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-center border border-blue-500/30">
             <p className="text-blue-200 font-bold text-sm">
