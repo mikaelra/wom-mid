@@ -232,11 +232,11 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       </div>
 
-      {/* Gremlin name and HP bar — top slot, centered */}
+      {/* Gremlin name and HP bar — below message panel, centered over gremlin */}
       {gremlin && (
         <div
           className="absolute"
-          style={{ top: '28%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
             <p className="text-green-400 font-bold text-sm">{gremlin.name}</p>
@@ -258,7 +258,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {showActions && (
         <div
           className="absolute pointer-events-auto"
-          style={{ top: '37%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          style={{ top: '45%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <button
             type="button"
@@ -278,7 +278,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {showActions && (
         <div
           className="absolute pointer-events-auto"
-          style={{ top: '49%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          style={{ top: '54%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <button
             type="button"
@@ -298,7 +298,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {myPlayer && (
         <div
           className="absolute"
-          style={{ top: '53%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          style={{ top: '59%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-center border border-blue-500/30">
             <p className="text-blue-200 font-bold text-sm">
@@ -312,7 +312,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {showActions && (
         <div
           className="absolute pointer-events-auto"
-          style={{ top: '61%', left: '50%', transform: 'translateX(-50%)' }}
+          style={{ top: '65%', left: '50%', transform: 'translateX(-50%)' }}
         >
           <button
             type="button"
@@ -332,7 +332,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {myPlayer && !myPlayer.spectator && (
         <div
           className="absolute flex gap-2 pointer-events-auto"
-          style={{ top: '68%', left: '50%', transform: 'translateX(-50%)' }}
+          style={{ top: '72%', left: '50%', transform: 'translateX(-50%)' }}
         >
           <button
             type="button"
