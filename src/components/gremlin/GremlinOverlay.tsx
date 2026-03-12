@@ -236,7 +236,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {gremlin && (
         <div
           className="absolute pointer-events-auto"
-          style={{ top: '33%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          style={{ top: '28%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
             <p className="text-green-400 font-bold text-sm">{gremlin.name}</p>
