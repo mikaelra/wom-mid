@@ -232,31 +232,11 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       </div>
 
-      {/* Attack button — floats over the gremlin */}
-      {showActions && (
-        <div
-          className="absolute pointer-events-auto"
-          style={{ top: '28%', left: '50%', transform: 'translateX(-50%)' }}
-        >
-          <button
-            type="button"
-            onClick={() => handleAction('attack')}
-            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
-              action === 'attack'
-                ? 'bg-red-600 text-white border-red-400'
-                : 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90'
-            }`}
-          >
-            ⚔ ATTACK
-          </button>
-        </div>
-      )}
-
-      {/* Gremlin name and HP bar — between attack and well, right of center */}
+      {/* Gremlin name and HP bar — top slot, centered */}
       {gremlin && (
         <div
           className="absolute"
-          style={{ top: '37%', left: 'calc(50% + 120px)', transform: 'translateY(-50%)' }}
+          style={{ top: '28%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
             <p className="text-green-400 font-bold text-sm">{gremlin.name}</p>
@@ -274,11 +254,31 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
-      {/* "The Well" raid button — center of the table */}
+      {/* Attack button */}
       {showActions && (
         <div
           className="absolute pointer-events-auto"
-          style={{ top: '46%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          style={{ top: '37%', left: '50%', transform: 'translate(-50%, -50%)' }}
+        >
+          <button
+            type="button"
+            onClick={() => handleAction('attack')}
+            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
+              action === 'attack'
+                ? 'bg-red-600 text-white border-red-400'
+                : 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90'
+            }`}
+          >
+            ⚔ ATTACK
+          </button>
+        </div>
+      )}
+
+      {/* "The Well" raid button — just above player nametag */}
+      {showActions && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{ top: '49%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <button
             type="button"
