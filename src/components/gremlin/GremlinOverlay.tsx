@@ -232,10 +232,10 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       </div>
 
-      {/* Gremlin name and HP bar — below message panel, centered over gremlin */}
+      {/* Gremlin name, HP bar, and attack button — combined card */}
       {gremlin && (
         <div
-          className="absolute"
+          className="absolute pointer-events-auto"
           style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
@@ -250,27 +250,20 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
             <p className="text-green-300 text-xs mt-1">
               {Math.max(0, gremlin.hp)} / 5 HP
             </p>
+            {showActions && (
+              <button
+                type="button"
+                onClick={() => handleAction('attack')}
+                className={`mt-2 w-full ${btn} text-sm shadow-lg ${
+                  action === 'attack'
+                    ? 'bg-red-600 text-white border-red-400'
+                    : 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90'
+                }`}
+              >
+                ⚔ ATTACK
+              </button>
+            )}
           </div>
-        </div>
-      )}
-
-      {/* Attack button */}
-      {showActions && (
-        <div
-          className="absolute pointer-events-auto"
-          style={{ top: '45%', left: '50%', transform: 'translate(-50%, -50%)' }}
-        >
-          <button
-            type="button"
-            onClick={() => handleAction('attack')}
-            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
-              action === 'attack'
-                ? 'bg-red-600 text-white border-red-400'
-                : 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90'
-            }`}
-          >
-            ⚔ ATTACK
-          </button>
         </div>
       )}
 
