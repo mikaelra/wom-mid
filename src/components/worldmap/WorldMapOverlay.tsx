@@ -73,12 +73,6 @@ export default function WorldMapOverlay() {
         </h1>
       </div>
 
-      {/* Bottom hint */}
-      <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center pointer-events-none">
-        <p className="text-white/50 text-sm animate-pulse">
-          Click a city to enter
-        </p>
-      </div>
     </>
   );
 }
