@@ -12,6 +12,7 @@ export interface Player {
   raskibask?: boolean;
   thief?: boolean;
   ally_of_player?: boolean;
+  bot?: boolean;
   spectator: boolean;
   title?: string;
   submittedAction?: string;

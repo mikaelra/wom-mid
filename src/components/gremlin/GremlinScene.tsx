@@ -1,7 +1,7 @@
 'use client';
 
 import { useThree, useFrame } from '@react-three/fiber';
-import { Environment, useGLTF } from '@react-three/drei';
+import { Environment, useGLTF, Html } from '@react-three/drei';
 import { useRef, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import type { LobbyState } from '@/types/game';
@@ -243,6 +243,72 @@ function Mushroom({ position }: { position: [number, number, number] }) {
   );
 }
 
+// 3D wooden signpost that appears after victory
+function WoodenSignpost({
+  position,
+  text,
+  visible,
+}: {
+  position: [number, number, number];
+  text: string;
+  visible: boolean;
+}) {
+  const groupRef = useRef<THREE.Group>(null!);
+  const bobRef = useRef(0);
+
+  useFrame((_, delta) => {
+    if (!groupRef.current || !visible) return;
+    bobRef.current += delta * 1.2;
+    groupRef.current.position.y = position[1] + Math.sin(bobRef.current) * 0.04;
+  });
+
+  if (!visible) return null;
+
+  return (
+    <group ref={groupRef} position={position}>
+      {/* Pole */}
+      <mesh position={[0, 0.6, 0]} castShadow>
+        <cylinderGeometry args={[0.06, 0.08, 1.2, 8]} />
+        <meshStandardMaterial color="#5d3a1a" roughness={0.9} />
+      </mesh>
+      {/* Sign board */}
+      <mesh position={[0, 1.35, 0.02]} castShadow>
+        <boxGeometry args={[1.2, 0.5, 0.08]} />
+        <meshStandardMaterial color="#8B6914" roughness={0.85} />
+      </mesh>
+      {/* Board edge / frame */}
+      <mesh position={[0, 1.35, 0.065]}>
+        <boxGeometry args={[1.25, 0.55, 0.01]} />
+        <meshStandardMaterial color="#6b4f12" roughness={0.9} />
+      </mesh>
+      {/* Wood grain lines */}
+      <mesh position={[0, 1.25, 0.07]}>
+        <boxGeometry args={[1.1, 0.01, 0.005]} />
+        <meshStandardMaterial color="#7a5a10" />
+      </mesh>
+      <mesh position={[0, 1.45, 0.07]}>
+        <boxGeometry args={[1.1, 0.01, 0.005]} />
+        <meshStandardMaterial color="#7a5a10" />
+      </mesh>
+      {/* Text label using Html */}
+      <Html position={[0, 1.35, 0.1]} center transform occlude={false}>
+        <div style={{
+          fontFamily: 'serif',
+          fontWeight: 'bold',
+          fontSize: '18px',
+          color: '#FFD700',
+          textShadow: '1px 1px 2px #000, -1px -1px 2px #000',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}>
+          {text}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 type GremlinSceneProps = {
   state: LobbyState | null;
 };
@@ -250,6 +316,7 @@ type GremlinSceneProps = {
 export default function GremlinScene({ state }: GremlinSceneProps) {
   const gremlin = state?.players.find((p) => p.gremlin || p.boss);
   const gremlinAlive = gremlin ? gremlin.hp > 0 : true;
+  const playerWon = !!(state?.gameover && (state?.winner === 'Players' || (state?.winner && !state.players.find(p => p.bot && p.name === state.winner))));
 
   const trees = useMemo(
     () =>
@@ -327,6 +394,9 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
 
       {/* Player — cherub model, near side of table, facing the gremlin */}
       <CherubModel position={CHERUB_POS} rotation={[0, Math.PI, 0]} />
+
+      {/* Wooden signpost after victory */}
+      <WoodenSignpost position={[2, 0, 0.5]} text="more gremlins" visible={playerWon} />
 
       <Environment preset="forest" />
     </>
