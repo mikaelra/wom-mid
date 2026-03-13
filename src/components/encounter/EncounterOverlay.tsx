@@ -7,18 +7,19 @@ import {
   getState,
   submitChoice,
   getPlayerMessages,
-  createForestEncounter,
+  createThiefEncounter,
+  sendLobbyChat,
 } from '@/lib/api';
-import type { LobbyState } from '@/types/game';
+import type { LobbyState, ChatMessage } from '@/types/game';
 
 const btn = 'px-4 py-2 rounded-lg border-2 border-black font-bold cursor-pointer transition-colors';
 
-type GremlinOverlayProps = {
+type EncounterOverlayProps = {
   lobbyId: string;
   onStateChange?: (state: LobbyState | null) => void;
 };
 
-export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverlayProps) {
+export default function EncounterOverlay({ lobbyId, onStateChange }: EncounterOverlayProps) {
   const router = useRouter();
   const [playerName, setPlayerName] = useState('');
   const [state, setState] = useState<LobbyState | null>(null);
@@ -31,6 +32,16 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
   const lastMessagesFlat = useRef('');
   const messagesRef = useRef<HTMLUListElement>(null);
   const messagesWrapRef = useRef<HTMLDivElement>(null);
+
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Thief intro popup
+  const [showThiefPopup, setShowThiefPopup] = useState(false);
+  const thiefPopupShown = useRef(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -58,6 +69,26 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
     onStateChange?.(state);
   }, [state, onStateChange]);
 
+  // Show thief intro popup
+  useEffect(() => {
+    if (state?.thief_encounter && !thiefPopupShown.current) {
+      thiefPopupShown.current = true;
+      setShowThiefPopup(true);
+    }
+  }, [state?.thief_encounter]);
+
+  // Update chat messages from state
+  useEffect(() => {
+    if (state?.chat) {
+      setChatMessages(state.chat);
+    }
+  }, [state?.chat]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
   // Round timer
   useEffect(() => {
     if (!state?.round_end_time) {
@@ -72,7 +103,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
     return () => clearInterval(interval);
   }, [state?.round_end_time]);
 
-  // Reset choices on new round, collapse messages
+  // Reset choices on new round
   useEffect(() => {
     setAction('');
     setResource('');
@@ -95,23 +126,29 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       .catch(() => {});
   }, [state?.round, lobbyId, playerName, state?.deny_target]);
 
-  // Detect if messages overflow the collapsed container
+  // Detect messages overflow
   useEffect(() => {
     if (!messagesWrapRef.current || !messagesRef.current) return;
     const wrap = messagesWrapRef.current;
     const list = messagesRef.current;
-    // Short delay so DOM has painted
     const t = setTimeout(() => {
       setMessagesOverflow(list.scrollHeight > wrap.clientHeight + 2);
     }, 50);
     return () => clearTimeout(t);
   }, [messages, messagesExpanded]);
 
-  const gremlin = state?.players.find((p) => p.boss);
+  const isThiefEncounter = state?.thief_encounter ?? false;
+  const boss = state?.players.find((p) => p.boss);
+  const gremlin = state?.players.find((p) => p.gremlin);
+  const raskibask = state?.players.find((p) => p.raskibask);
+  const thief = state?.players.find((p) => p.thief);
   const myPlayer = state?.players.find((p) => p.name === playerName);
   const isAlive = (myPlayer?.hp ?? 0) > 0;
   const gameOver = state?.gameover ?? false;
   const gameStarted = (state?.round ?? 0) > 0;
+
+  // Determine primary target (boss — the thief in thief encounters, gremlin otherwise)
+  const primaryEnemy = isThiefEncounter ? thief : boss;
 
   const handleResource = async (resId: string) => {
     try {
@@ -122,20 +159,23 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
     }
   };
 
-  const handleAction = async (act: string) => {
+  const handleAction = async (act: string, targetName?: string) => {
     setAction(act);
-    if (act === 'attack' && gremlin) {
-      try {
-        await submitChoice(lobbyId, { player: playerName, action: 'attack', target: gremlin.name, resource: '' });
-      } catch (e) {
-        alert(e instanceof Error ? e.message : 'API error');
-      }
-    } else {
-      try {
-        await submitChoice(lobbyId, { player: playerName, action: act, resource: '' });
-      } catch (e) {
-        alert(e instanceof Error ? e.message : 'API error');
-      }
+    const target = act === 'attack' ? (targetName ?? primaryEnemy?.name) : undefined;
+    try {
+      await submitChoice(lobbyId, { player: playerName, action: act, target, resource: '' });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'API error');
+    }
+  };
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim()) return;
+    try {
+      await sendLobbyChat(lobbyId, playerName, chatInput.trim());
+      setChatInput('');
+    } catch (e) {
+      console.warn('Failed to send chat', e);
     }
   };
 
@@ -148,10 +188,21 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
   }
 
   const showActions = !gameOver && isAlive && gameStarted;
+  const playerWon = gameOver && state.winner === playerName;
+
+  // Enemy display info
+  const enemies = isThiefEncounter
+    ? [
+        { player: thief, label: thief?.name ?? 'Thief', maxHp: 10, color: 'gray' },
+        { player: gremlin, label: gremlin?.name ?? 'Gremlin', maxHp: 5, color: 'green' },
+      ]
+    : [
+        { player: boss, label: boss?.name ?? 'Gremlin', maxHp: 5, color: 'green' },
+        { player: raskibask, label: raskibask?.name ?? 'Raskibask', maxHp: 3, color: 'amber' },
+      ];
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10">
-      {/* Keyframe for round number zoom-in */}
       <style>{`
         @keyframes round-zoom-in {
           from { transform: scale(4); opacity: 0; }
@@ -161,7 +212,32 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
           display: inline-block;
           animation: round-zoom-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
+        @keyframes popup-appear {
+          from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+          to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
       `}</style>
+
+      {/* Thief intro popup */}
+      {showThiefPopup && (
+        <div className="absolute inset-0 z-50 pointer-events-auto" onClick={() => setShowThiefPopup(false)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="absolute bg-gray-900 border-2 border-red-600 rounded-xl px-8 py-6 text-center shadow-2xl"
+            style={{
+              top: '50%', left: '50%',
+              animation: 'popup-appear 0.4s ease-out forwards',
+            }}
+          >
+            <p className="text-gray-400 text-sm mb-1">The Thief speaks:</p>
+            <p className="text-red-500 font-bold text-3xl tracking-wider"
+               style={{ fontFamily: 'serif', textShadow: '0 0 10px rgba(255,0,0,0.5)' }}>
+              &ldquo;DIE CHERUB&rdquo;
+            </p>
+            <p className="text-gray-500 text-xs mt-3">click anywhere to dismiss</p>
+          </div>
+        </div>
+      )}
 
       {/* Back button */}
       <div className="absolute top-4 left-4 pointer-events-auto z-20">
@@ -173,7 +249,6 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
       {/* Round messages panel at top */}
       <div className="absolute top-12 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 pointer-events-auto z-20">
         <div className="bg-black/80 backdrop-blur-sm rounded-xl border border-green-500/30 p-3 sm:p-4 text-white">
-          {/* Round info + timer */}
           <div className="flex justify-between items-center">
             <span className="text-green-400 font-semibold">
               Round <span key={state.round} className="round-zoom">{state.round}</span>
@@ -185,7 +260,6 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
             )}
           </div>
 
-          {/* Messages */}
           {messages.length > 0 && (
             <div className="mt-2 border-t border-green-500/20 pt-2">
               <div
@@ -214,19 +288,18 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
           {gameOver && (
             <div className="mt-3 text-center">
               <p className="text-xl font-bold mb-2">
-                {state.winner === playerName ? (
-                  <span className="text-green-400">You defeated the Gremlin!</span>
-                ) : gremlin && state.winner === gremlin.name ? (
-                  <span className="text-red-400">The Gremlin got you...</span>
+                {playerWon ? (
+                  <span className="text-green-400">
+                    {isThiefEncounter ? 'You defeated the Thief!' : 'You defeated the enemies!'}
+                  </span>
                 ) : (
-                  <span className="text-yellow-400">Game Over! {state.winner} wins!</span>
+                  <span className="text-red-400">
+                    {isThiefEncounter ? 'The Thief got you...' : 'The forest creatures got you...'}
+                  </span>
                 )}
               </p>
-              {state.winner !== playerName && (
-                <Link
-                  href="/"
-                  className="text-green-400 hover:underline font-medium"
-                >
+              {!playerWon && (
+                <Link href="/" className="text-green-400 hover:underline font-medium">
                   ← Return to Home
                 </Link>
               )}
@@ -235,42 +308,52 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       </div>
 
-      {/* Gremlin name, HP bar, and attack button — combined card */}
-      {gremlin && (
-        <div
-          className="absolute pointer-events-auto"
-          style={{ top: '28%', left: '50%', transform: 'translate(-50%, -50%)' }}
-        >
-          <div className="bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center border border-green-500/30">
-            <p className="text-green-400 font-bold text-sm">{gremlin.name}</p>
-            <p className="text-gray-300 text-xs">{gremlin.title}</p>
-            <div className="mt-1 w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 transition-all duration-500 rounded-full"
-                style={{ width: `${Math.max(0, (gremlin.hp / 5) * 100)}%` }}
-              />
-            </div>
-            <p className="text-green-300 text-xs mt-1">
-              {Math.max(0, gremlin.hp)} / 5 HP
-            </p>
-            {showActions && (
-              <button
-                type="button"
-                onClick={() => handleAction('attack')}
-                className={`mt-2 w-full ${btn} text-sm shadow-lg ${
-                  action === 'attack'
-                    ? 'bg-red-600 text-white border-red-400'
-                    : 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90'
-                }`}
-              >
-                ⚔ ATTACK
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Enemy cards — side by side above the table */}
+      <div
+        className="absolute pointer-events-auto flex gap-3"
+        style={{ top: '26%', left: '50%', transform: 'translate(-50%, -50%)' }}
+      >
+        {enemies.map((enemy, idx) => {
+          if (!enemy.player) return null;
+          const hp = Math.max(0, enemy.player.hp);
+          const hpPct = Math.max(0, (hp / enemy.maxHp) * 100);
+          const barColor = enemy.color === 'green' ? 'bg-green-500' : enemy.color === 'amber' ? 'bg-amber-500' : 'bg-gray-400';
+          const borderColor = enemy.color === 'green' ? 'border-green-500/30' : enemy.color === 'amber' ? 'border-amber-500/30' : 'border-gray-500/30';
+          const textColor = enemy.color === 'green' ? 'text-green-400' : enemy.color === 'amber' ? 'text-amber-400' : 'text-gray-300';
+          const hpTextColor = enemy.color === 'green' ? 'text-green-300' : enemy.color === 'amber' ? 'text-amber-300' : 'text-gray-300';
+          const btnBg = 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90';
+          const btnActive = 'bg-red-600 text-white border-red-400';
 
-      {/* "The Well" raid button — just above player nametag */}
+          return (
+            <div key={idx} className={`bg-black/70 backdrop-blur-sm rounded-xl px-3 py-2 text-center border ${borderColor}`}>
+              <p className={`${textColor} font-bold text-sm`}>{enemy.label}</p>
+              <p className="text-gray-400 text-xs">{enemy.player.title}</p>
+              <div className="mt-1 w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${barColor} transition-all duration-500 rounded-full`}
+                  style={{ width: `${hpPct}%` }}
+                />
+              </div>
+              <p className={`${hpTextColor} text-xs mt-1`}>
+                {hp} / {enemy.maxHp} HP
+              </p>
+              {showActions && enemy.player.alive && (
+                <button
+                  type="button"
+                  onClick={() => handleAction('attack', enemy.player!.name)}
+                  className={`mt-2 w-full ${btn} text-xs shadow-lg ${
+                    action === 'attack' ? btnActive : btnBg
+                  }`}
+                >
+                  ⚔ ATTACK
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Raid button */}
       {showActions && (
         <div
           className="absolute pointer-events-auto"
@@ -290,7 +373,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
-      {/* Player nametag — between well and defend, right of center */}
+      {/* Player nametag */}
       {myPlayer && (
         <div
           className="absolute"
@@ -304,7 +387,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
-      {/* Defend button — on the player character */}
+      {/* Defend button */}
       {showActions && (
         <div
           className="absolute pointer-events-auto"
@@ -324,7 +407,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
-      {/* Stats — clickable resource windows below the player character */}
+      {/* Stat windows */}
       {myPlayer && !myPlayer.spectator && (
         <div
           className="absolute flex gap-2 pointer-events-auto"
@@ -378,8 +461,76 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
         </div>
       )}
 
-      {/* Wooden signpost after victory */}
-      {gameOver && state.winner === playerName && (
+      {/* Chat UI — only for thief encounter */}
+      {isThiefEncounter && (
+        <div className="absolute bottom-4 right-4 pointer-events-auto z-30">
+          {chatOpen ? (
+            <div className="w-72 bg-black/90 backdrop-blur-sm border border-green-500/30 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-green-500/20">
+                <span className="text-green-400 font-bold text-sm">Chat</span>
+                <button
+                  type="button"
+                  onClick={() => setChatOpen(false)}
+                  className="text-gray-400 hover:text-white text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="h-48 overflow-y-auto px-3 py-2 space-y-1">
+                {chatMessages.map((msg, i) => {
+                  const isThiefMsg = msg.sender.includes('Thief');
+                  const isSystem = msg.sender === 'System';
+                  return (
+                    <div key={i} className="text-xs">
+                      <span className={`font-bold ${
+                        isThiefMsg ? 'text-red-400' :
+                        isSystem ? 'text-yellow-400' :
+                        msg.sender === playerName ? 'text-blue-400' : 'text-green-400'
+                      }`}>
+                        {msg.sender}:
+                      </span>{' '}
+                      <span className="text-gray-300">{msg.message}</span>
+                    </div>
+                  );
+                })}
+                <div ref={chatEndRef} />
+              </div>
+              <div className="flex border-t border-green-500/20">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSendChat();
+                  }}
+                  placeholder="Type a message..."
+                  className="flex-1 bg-transparent text-white text-sm px-3 py-2 outline-none placeholder-gray-500"
+                  maxLength={200}
+                />
+                <button
+                  type="button"
+                  onClick={handleSendChat}
+                  className="px-3 text-green-400 hover:text-green-300 text-sm font-bold"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="bg-black/80 border border-green-500/30 rounded-full px-4 py-2 text-green-400 font-bold text-sm
+                         hover:bg-green-900/40 transition-colors shadow-lg"
+            >
+              💬 Chat
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Wooden signpost after forest encounter victory → leads to thief encounter */}
+      {gameOver && playerWon && !isThiefEncounter && (
         <div
           className="absolute pointer-events-auto"
           style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
@@ -388,7 +539,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
             type="button"
             onClick={async () => {
               try {
-                const { lobby_id } = await createForestEncounter(playerName);
+                const { lobby_id } = await createThiefEncounter(playerName);
                 router.push(`/encounter/${lobby_id}`);
               } catch (e) {
                 alert(e instanceof Error ? e.message : 'Failed to start encounter');
@@ -396,9 +547,7 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
             }}
             className="cursor-pointer group"
           >
-            {/* Signpost pole */}
             <div className="w-3 h-16 bg-amber-800 mx-auto rounded-sm shadow-lg" />
-            {/* Signpost board */}
             <div
               className="relative -mt-20 bg-amber-700 border-4 border-amber-900 rounded-lg px-6 py-3 shadow-2xl
                          group-hover:bg-amber-600 group-hover:scale-105 transition-all duration-200"
@@ -408,11 +557,29 @@ export default function GremlinOverlay({ lobbyId, onStateChange }: GremlinOverla
             >
               <p className="text-yellow-300 font-bold text-xl tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]"
                  style={{ fontFamily: 'serif', textShadow: '1px 1px 0 #000, -1px -1px 0 #000' }}>
-                more gremlins
+                THEIF!
               </p>
               <p className="text-amber-200 text-xs mt-1 opacity-80">click to continue</p>
             </div>
           </button>
+        </div>
+      )}
+
+      {/* Thief encounter victory — return home */}
+      {gameOver && playerWon && isThiefEncounter && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+        >
+          <div className="bg-black/80 backdrop-blur-sm rounded-xl px-6 py-4 text-center border border-green-500/30">
+            <p className="text-green-400 font-bold text-lg mb-2">The forest is safe... for now.</p>
+            <Link
+              href="/"
+              className="text-green-300 hover:underline font-medium"
+            >
+              ← Return to Home
+            </Link>
+          </div>
         </div>
       )}
 

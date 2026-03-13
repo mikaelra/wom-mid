@@ -72,6 +72,54 @@ export async function createGremlinLobby(playerName: string): Promise<{ lobby_id
   return res.json();
 }
 
+export async function createForestEncounter(playerName: string): Promise<{ lobby_id: string }> {
+  const res = await fetch(`${BACKEND_URL}/create_forest_encounter`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: playerName }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error((errorData as { error?: string }).error ?? "Failed to create forest encounter");
+  }
+  return res.json();
+}
+
+export async function createThiefEncounter(playerName: string): Promise<{ lobby_id: string }> {
+  const res = await fetch(`${BACKEND_URL}/create_thief_encounter`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: playerName }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error((errorData as { error?: string }).error ?? "Failed to create thief encounter");
+  }
+  return res.json();
+}
+
+export interface ChatMessage {
+  sender: string;
+  message: string;
+  timestamp: string;
+}
+
+export async function sendLobbyChat(
+  lobbyId: string,
+  playerName: string,
+  message: string
+): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/send_message/${lobbyId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: playerName, message }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error((errorData as { error?: string }).error ?? "Failed to send message");
+  }
+}
+
 export async function getState(lobbyId: string): Promise<LobbyState> {
   const res = await fetch(`${BACKEND_URL}/get_state/${lobbyId}`);
   if (!res.ok) throw new Error(`get_state failed: ${res.status}`);

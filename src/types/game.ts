@@ -9,11 +9,20 @@ export interface Player {
   idle_rounds: number;
   boss?: boolean;
   gremlin?: boolean;
+  raskibask?: boolean;
+  thief?: boolean;
+  ally_of_player?: boolean;
   spectator: boolean;
   title?: string;
   submittedAction?: string;
   submittedResource?: string;
   target?: string;
+}
+
+export interface ChatMessage {
+  sender: string;
+  message: string;
+  timestamp: string;
 }
 
 export interface LobbyState {
@@ -28,10 +37,13 @@ export interface LobbyState {
   start_time: number;
   boss_fight: boolean | null;
   gremlin_fight?: boolean | null;
+  forest_encounter?: boolean | null;
+  thief_encounter?: boolean | null;
   gameover: boolean | null;
   replay_votes_count?: number;
   replay_votes_needed?: number;
   next_lobby_id?: string | null;
+  chat?: ChatMessage[];
 }
 
 export interface Relic {
