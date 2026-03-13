@@ -13,7 +13,7 @@ import HomeOverlay from '@/components/home/HomeOverlay';
 import WorldMap from '@/components/worldmap/WorldMap';
 import WorldMapOverlay from '@/components/worldmap/WorldMapOverlay';
 import type { City } from '@/lib/cities';
-import { createGremlinLobby, createLobby, joinLobby } from '@/lib/api';
+import { createGremlinLobby } from '@/lib/api';
 
 // Dynamically import heavy 3D models
 const Model = dynamic(() => import('../components/Model'), { ssr: false });
@@ -175,14 +175,6 @@ export default function Page() {
   const [gremlinError, setGremlinError] = useState('');
   const [gremlinLoading, setGremlinLoading] = useState(false);
 
-  // Lobby controls on globe screen
-  const [joinCode, setJoinCode] = useState('');
-  const [showLobbyNamePopup, setShowLobbyNamePopup] = useState(false);
-  const [lobbyUsername, setLobbyUsername] = useState('');
-  const [lobbyError, setLobbyError] = useState('');
-  const [lobbyLoading, setLobbyLoading] = useState(false);
-  const [pendingLobbyAction, setPendingLobbyAction] = useState<'join' | 'create' | null>(null);
-
   const router = useRouter();
 
   const handleCityClick = useCallback((city: City) => {
@@ -230,72 +222,6 @@ export default function Page() {
     setSelectedCity(null);
   }, []);
 
-  const doJoinLobby = useCallback(async (name: string) => {
-    const code = joinCode.trim();
-    if (!code) return;
-    const email = typeof window !== 'undefined' ? localStorage.getItem('playerEmail') || '' : '';
-    try {
-      await joinLobby(code, name, email);
-      if (typeof window !== 'undefined') localStorage.setItem('playerName', name);
-      router.push(`/lobby/${code}`);
-    } catch (err) {
-      setLobbyError(err instanceof Error ? err.message : 'Join failed');
-      setLobbyLoading(false);
-    }
-  }, [joinCode, router]);
-
-  const doCreateLobby = useCallback(async (name: string) => {
-    const email = typeof window !== 'undefined' ? localStorage.getItem('playerEmail') || '' : '';
-    try {
-      const data = await createLobby(name, email);
-      if (typeof window !== 'undefined') localStorage.setItem('playerName', name);
-      router.push(`/lobby/${data.lobby_id}`);
-    } catch (err) {
-      setLobbyError(err instanceof Error ? err.message : 'Create lobby failed');
-      setLobbyLoading(false);
-    }
-  }, [router]);
-
-  const handleJoinLobby = useCallback(() => {
-    const playerName = typeof window !== 'undefined' ? localStorage.getItem('playerName') : null;
-    if (!playerName) {
-      setPendingLobbyAction('join');
-      setLobbyUsername('');
-      setLobbyError('');
-      setShowLobbyNamePopup(true);
-      return;
-    }
-    doJoinLobby(playerName);
-  }, [doJoinLobby]);
-
-  const handleCreateLobby = useCallback(() => {
-    const playerName = typeof window !== 'undefined' ? localStorage.getItem('playerName') : null;
-    if (!playerName) {
-      setPendingLobbyAction('create');
-      setLobbyUsername('');
-      setLobbyError('');
-      setShowLobbyNamePopup(true);
-      return;
-    }
-    doCreateLobby(playerName);
-  }, [doCreateLobby]);
-
-  const handleLobbyNameSubmit = useCallback(async () => {
-    const trimmed = lobbyUsername.trim();
-    if (!trimmed) {
-      setLobbyError('Please enter a username.');
-      return;
-    }
-    setLobbyError('');
-    setLobbyLoading(true);
-    setShowLobbyNamePopup(false);
-    if (pendingLobbyAction === 'join') {
-      await doJoinLobby(trimmed);
-    } else if (pendingLobbyAction === 'create') {
-      await doCreateLobby(trimmed);
-    }
-  }, [lobbyUsername, pendingLobbyAction, doJoinLobby, doCreateLobby]);
-
   // ---------- World Map view ----------
   if (!selectedCity) {
     return (
@@ -304,38 +230,6 @@ export default function Page() {
         <Canvas camera={{ position: [0, 2, 7], fov: 50 }}>
           <WorldMap onCityClick={handleCityClick} />
         </Canvas>
-
-        {/* Lobby controls — bottom center */}
-        <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Lobby code"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleJoinLobby()}
-                className="w-36 p-2 rounded-md bg-black/60 backdrop-blur-sm border border-white/30 text-white placeholder-white/40 focus:outline-none focus:border-white/60 text-sm"
-              />
-              <button
-                type="button"
-                onClick={handleJoinLobby}
-                disabled={lobbyLoading}
-                className="px-4 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold text-sm hover:bg-white/20 transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                Join Lobby
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={handleCreateLobby}
-              disabled={lobbyLoading}
-              className="px-5 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold text-sm hover:bg-white/20 transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {lobbyLoading ? 'Loading...' : 'Create Lobby'}
-            </button>
-          </div>
-        </div>
 
         {/* Gremlin's Lair login popup */}
         {showGremlinPopup && (
@@ -382,49 +276,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* Lobby name popup — shown when not logged in */}
-        {showLobbyNamePopup && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-            onClick={() => setShowLobbyNamePopup(false)}
-          >
-            <div
-              className="bg-gray-900 border border-white/20 text-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-xl font-bold mb-1 text-white">Choose a name</h2>
-              <p className="text-sm text-white/60 mb-4">Pick a battle name before you {pendingLobbyAction === 'join' ? 'join' : 'create'} a lobby.</p>
-              <input
-                type="text"
-                placeholder="Your battle name"
-                value={lobbyUsername}
-                onChange={(e) => setLobbyUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLobbyNameSubmit()}
-                autoFocus
-                className="w-full p-2 rounded-md bg-gray-800 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-white/50 mb-3"
-              />
-              {lobbyError && (
-                <p className="text-red-400 text-sm mb-3">{lobbyError}</p>
-              )}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleLobbyNameSubmit}
-                  className="flex-1 py-2 rounded-lg bg-white/20 hover:bg-white/30 font-bold text-white transition-colors cursor-pointer"
-                >
-                  Continue
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowLobbyNamePopup(false)}
-                  className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
