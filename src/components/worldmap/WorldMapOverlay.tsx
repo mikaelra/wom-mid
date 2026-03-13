@@ -150,7 +150,7 @@ export default function WorldMapOverlay() {
       </div>
 
       {/* Bottom: lobby controls */}
-      <div className="absolute bottom-20 left-0 right-0 z-20 flex justify-center pointer-events-none">
+      <div className="absolute bottom-56 left-0 right-0 z-20 flex justify-center pointer-events-none">
         <div className="pointer-events-auto flex flex-col items-center gap-3">
           <div className="flex items-center gap-2">
             <input
