@@ -296,7 +296,7 @@ function WoodenSignpost({ show }: { show: boolean }) {
   if (!show) return null;
 
   return (
-    <group ref={groupRef} position={[2.3, 16, 0.3]}>
+    <group ref={groupRef} position={[1.48, 16, 0.3]}>
       {/* Wooden post */}
       <mesh position={[0, 0.6, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.045, 0.065, 1.2, 8]} />
