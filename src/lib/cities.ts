@@ -39,6 +39,7 @@ export interface City {
  */
 export const CITIES: City[] = [
   { id: 3, name: "Athens", country: "Greece", lat: 37.9838, lng: -25, color: "#3b82f6", tag: "Marble Columns" },
+  { id: 8, name: "Oslo", country: "Norway", lat: 59.9139, lng: -4, color: "#38bdf8", tag: "Viking Fjords" },
   { id: 11, name: "Gremlin's Lair", country: "Black Forest", lat: 48.5, lng: -5, color: "#22c55e", tag: "Dark Forest", isGremlin: true },
   { id: 12, name: "The Vault", country: "South Pole", lat: -90, lng: 0, color: "#FFD700", tag: "The Vault", isVault: true },
 ];
