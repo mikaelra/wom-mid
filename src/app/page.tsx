@@ -174,6 +174,7 @@ export default function Page() {
   const [gremlinUsername, setGremlinUsername] = useState('');
   const [gremlinError, setGremlinError] = useState('');
   const [gremlinLoading, setGremlinLoading] = useState(false);
+
   const router = useRouter();
 
   const handleCityClick = useCallback((city: City) => {
@@ -224,7 +225,7 @@ export default function Page() {
   // ---------- World Map view ----------
   if (!selectedCity) {
     return (
-      <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+      <div style={{ width: '100%', height: '100vh', position: 'relative', overflow: 'hidden' }}>
         <WorldMapOverlay />
         <Canvas camera={{ position: [0, 2, 7], fov: 50 }}>
           <WorldMap onCityClick={handleCityClick} />
@@ -274,6 +275,7 @@ export default function Page() {
             </div>
           </div>
         )}
+
       </div>
     );
   }
