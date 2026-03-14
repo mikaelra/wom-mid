@@ -9,6 +9,7 @@ export interface Player {
   idle_rounds: number;
   boss?: boolean;
   gremlin?: boolean;
+  lost_soul?: boolean;
   spectator: boolean;
   title?: string;
   submittedAction?: string;

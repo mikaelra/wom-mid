@@ -1,8 +1,8 @@
 'use client';
 
 import { useThree, useFrame } from '@react-three/fiber';
-import { Html, Environment } from '@react-three/drei';
-import { useRef } from 'react';
+import { Html, Environment, useGLTF } from '@react-three/drei';
+import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import Mountain from '@/components/mountain';
 import Table from '@/components/Table';
@@ -86,13 +86,67 @@ function PlayerWithName({
 }
 
 
+const LOST_SOUL_POSITIONS: [number, number, number][] = [
+  [-0.7, 4.2, -0.7],
+  [0.7, 4.2, -0.7],
+  [-0.7, 4.2, 0.7],
+  [0.7, 4.2, 0.7],
+];
+
+function LostSoulModel({
+  name,
+  position,
+}: {
+  name: string;
+  position: [number, number, number];
+}) {
+  const { scene } = useGLTF('/models/ghost.glb');
+  const sceneClone = useMemo(() => scene.clone(), [scene]);
+  const ref = useRef<THREE.Group>(null);
+
+  useFrame((state) => {
+    if (ref.current) {
+      ref.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 1.8 + position[0]) * 0.1;
+    }
+  });
+
+  return (
+    <group ref={ref} position={position}>
+      <primitive object={sceneClone} scale={0.4} />
+      <Html
+        position={[0, 0.6, 0]}
+        center
+        distanceFactor={3}
+        style={{
+          pointerEvents: 'none',
+          userSelect: 'none',
+          whiteSpace: 'nowrap',
+          fontSize: '13px',
+          fontWeight: 'bold',
+          color: '#a78bfa',
+          textShadow: '0 0 6px rgba(100,0,200,0.8)',
+          padding: '2px 6px',
+          background: 'rgba(0,0,0,0.6)',
+          borderRadius: '4px',
+        }}
+      >
+        {name}
+      </Html>
+    </group>
+  );
+}
+
+useGLTF.preload('/models/ghost.glb');
+
 type LobbySceneProps = {
   state: LobbyState | null;
   playerName: string;
 };
 
 export default function LobbyScene({ state, playerName }: LobbySceneProps) {
-  const players = (state?.players ?? []).slice(0, PLAYER_POSITIONS.length);
+  const allPlayers = state?.players ?? [];
+  const lostSouls = allPlayers.filter((p) => p.lost_soul);
+  const players = allPlayers.filter((p) => !p.lost_soul).slice(0, PLAYER_POSITIONS.length);
   const winner = state?.winner ?? state?.raidwinner ?? null;
   return (
     <>
@@ -120,6 +174,17 @@ export default function LobbyScene({ state, playerName }: LobbySceneProps) {
             isAnimating={true}
             isDead={isDead}
             isWinner={!!isWinner}
+          />
+        );
+      })}
+
+      {lostSouls.map((soul, i) => {
+        const pos = LOST_SOUL_POSITIONS[i % LOST_SOUL_POSITIONS.length];
+        return (
+          <LostSoulModel
+            key={soul.name}
+            name={soul.name}
+            position={pos}
           />
         );
       })}
