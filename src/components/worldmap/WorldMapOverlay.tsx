@@ -97,7 +97,7 @@ export default function WorldMapOverlay() {
   return (
     <>
       {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 z-20 flex flex-wrap items-center justify-between gap-2 px-3 py-2 pointer-events-none">
         {/* Left: player info */}
         <div className="pointer-events-auto flex items-center gap-3">
           {isLoggedIn ? (
@@ -151,7 +151,7 @@ export default function WorldMapOverlay() {
 
       {/* Bottom: lobby controls */}
       <div className="absolute bottom-44 left-0 right-0 z-20 flex justify-center pointer-events-none">
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 px-3">
           <input
             type="text"
             placeholder="Lobby code"
