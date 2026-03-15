@@ -16,6 +16,7 @@ This document is the overarching design plan for the **World of Mythos Alpha** r
 4. **Lobby chat** — Players can text each other inside a lobby before and during a match.
 5. **All in-game button labels are in English.**
 6. **Email service** — Email verification on signup, optional email-based login auth, username retrieval via email. Uses Resend as the mail provider.
+7. **Invite link from lobby** — Players can invite friends directly from the lobby using a simple shareable link.
 
 ### Not required for Alpha (post-alpha)
 
