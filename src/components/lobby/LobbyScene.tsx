@@ -54,6 +54,7 @@ function PlayerWithName({
   return (
     <group position={position} rotation={rotation}>
       <PlayerV1
+        url="/models/cherub-v01.glb"
         scale={0.15}
         position={[0, 0, 0]}
         rotation={[0, 0, 0]}
@@ -136,6 +137,7 @@ function LostSoulModel({
 }
 
 useGLTF.preload('/models/ghost.glb');
+useGLTF.preload('/models/cherub-v01.glb');
 
 type LobbySceneProps = {
   state: LobbyState | null;
