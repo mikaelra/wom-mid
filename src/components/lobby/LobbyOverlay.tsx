@@ -201,6 +201,15 @@ export default function LobbyOverlay({ lobbyId, onStateChange }: LobbyOverlayPro
     }
   };
 
+  const handleAttackBoss = async () => {
+    if (!boss) return;
+    try {
+      await submitChoice(lobbyId, { player: playerName, action: 'attack', target: boss.name, resource: '' });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'API error');
+    }
+  };
+
   const handleDeny = async () => {
     try {
       await submitDenyTarget(lobbyId, playerName, denyTarget);
@@ -450,6 +459,15 @@ export default function LobbyOverlay({ lobbyId, onStateChange }: LobbyOverlayPro
               />
             </div>
             <p className="text-red-300 text-xs mt-1">{Math.max(0, boss.hp)} HP</p>
+            {showActions && (
+              <button
+                type="button"
+                onClick={handleAttackBoss}
+                className={`${btn} text-sm backdrop-blur-sm shadow-lg mt-2 bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90`}
+              >
+                ⚔ ATTACK
+              </button>
+            )}
           </div>
         </div>
       )}

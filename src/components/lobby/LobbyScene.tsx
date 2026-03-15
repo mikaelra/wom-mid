@@ -145,8 +145,27 @@ function LostSoulModel({
   return (
     <group ref={ref} position={position}>
       <primitive object={sceneClone} scale={0.4} />
+      <Html
+        position={[0, 0.6, 0]}
+        center
+        distanceFactor={3}
+        style={{
+          pointerEvents: 'none',
+          userSelect: 'none',
+          whiteSpace: 'nowrap',
+          fontSize: '13px',
+          fontWeight: 'bold',
+          color: '#a78bfa',
+          textShadow: '0 0 6px rgba(100,0,200,0.8)',
+          padding: '2px 6px',
+          background: 'rgba(0,0,0,0.6)',
+          borderRadius: '4px',
+        }}
+      >
+        {name}
+      </Html>
       {showAttackButton && (
-        <Html position={[0, 0.93, 0]} center distanceFactor={3}>
+        <Html position={[0, 0.75, 0]} center distanceFactor={3}>
           <button
             onClick={onAttack}
             style={{
@@ -168,25 +187,6 @@ function LostSoulModel({
           </button>
         </Html>
       )}
-      <Html
-        position={[0, 0.6, 0]}
-        center
-        distanceFactor={3}
-        style={{
-          pointerEvents: 'none',
-          userSelect: 'none',
-          whiteSpace: 'nowrap',
-          fontSize: '13px',
-          fontWeight: 'bold',
-          color: '#a78bfa',
-          textShadow: '0 0 6px rgba(100,0,200,0.8)',
-          padding: '2px 6px',
-          background: 'rgba(0,0,0,0.6)',
-          borderRadius: '4px',
-        }}
-      >
-        {name}
-      </Html>
     </group>
   );
 }
@@ -245,16 +245,20 @@ export default function LobbyScene({ state, playerName, lobbyId }: LobbyScenePro
         const isDead = (player.hp ?? 0) <= 0;
         const isWinner = winner === player.name;
         const isOpponent = player.name !== playerName;
+        const isBoss = !!player.boss;
+        const playerRotation: [number, number, number] = player.name === playerName
+          ? [rotation[0], rotation[1] + Math.PI / 2, rotation[2]]
+          : rotation;
         return (
           <PlayerWithName
             key={player.name}
             name={player.name}
             position={position}
-            rotation={rotation}
+            rotation={playerRotation}
             isAnimating={true}
             isDead={isDead}
             isWinner={!!isWinner}
-            showAttackButton={showAttackButtons && isOpponent && !isDead}
+            showAttackButton={showAttackButtons && isOpponent && !isDead && !isBoss}
             onAttack={() => handleAttack(player.name)}
           />
         );
