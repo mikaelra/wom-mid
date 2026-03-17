@@ -126,6 +126,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
   const messagesWrapRef = useRef<HTMLDivElement>(null);
   const [chatInput, setChatInput] = useState('');
   const [chatSending, setChatSending] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -374,15 +375,34 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
         {showChat && (
           <div className="fixed pointer-events-auto z-50" style={{ bottom: '4%', left: '1%' }}>
             <div className="bg-black/80 backdrop-blur-sm rounded-xl border border-white/20 flex flex-col w-56 max-w-[56vw]">
-              <div className="overflow-y-auto max-h-32 px-2 pt-2 space-y-1">
-                {(state.chat ?? []).map((m, i) => (
-                  <div key={i} className="text-xs leading-tight break-words">
-                    <span className="text-blue-300 font-semibold">{m.sender}: </span>
-                    <span className="text-gray-200">{m.message}</span>
-                  </div>
-                ))}
-                <div ref={chatEndRef} />
-              </div>
+              <button
+                type="button"
+                onClick={() => setChatExpanded((e) => !e)}
+                className="flex items-center justify-between px-2 py-1.5 text-xs text-gray-300 hover:text-white w-full text-left"
+              >
+                <span>💬 Chat</span>
+                <span>{chatExpanded ? '▲' : '▼'}</span>
+              </button>
+              {chatExpanded ? (
+                <div className="overflow-y-auto max-h-40 px-2 pb-1 space-y-1 border-t border-white/10">
+                  {(state.chat ?? []).map((m, i) => (
+                    <div key={i} className="text-xs leading-tight break-words pt-1">
+                      <span className="text-blue-300 font-semibold">{m.sender}: </span>
+                      <span className="text-gray-200">{m.message}</span>
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+              ) : (
+                <div className="px-2 pb-1 space-y-1 border-t border-white/10">
+                  {(state.chat ?? []).slice(-2).map((m, i) => (
+                    <div key={i} className="text-xs leading-tight break-words pt-1">
+                      <span className="text-blue-300 font-semibold">{m.sender}: </span>
+                      <span className="text-gray-200">{m.message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-1 p-1.5 border-t border-white/10">
                 <input
                   type="text"
@@ -689,15 +709,34 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
           style={{ bottom: '4%', left: '1%' }}
         >
           <div className="bg-black/80 backdrop-blur-sm rounded-xl border border-white/20 flex flex-col w-56 max-w-[56vw]">
-            <div className="overflow-y-auto max-h-32 px-2 pt-2 space-y-1">
-              {(state?.chat ?? []).map((m, i) => (
-                <div key={i} className="text-xs leading-tight break-words">
-                  <span className="text-blue-300 font-semibold">{m.sender}: </span>
-                  <span className="text-gray-200">{m.message}</span>
-                </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
+            <button
+              type="button"
+              onClick={() => setChatExpanded((e) => !e)}
+              className="flex items-center justify-between px-2 py-1.5 text-xs text-gray-300 hover:text-white w-full text-left"
+            >
+              <span>💬 Chat</span>
+              <span>{chatExpanded ? '▲' : '▼'}</span>
+            </button>
+            {chatExpanded ? (
+              <div className="overflow-y-auto max-h-40 px-2 pb-1 space-y-1 border-t border-white/10">
+                {(state?.chat ?? []).map((m, i) => (
+                  <div key={i} className="text-xs leading-tight break-words pt-1">
+                    <span className="text-blue-300 font-semibold">{m.sender}: </span>
+                    <span className="text-gray-200">{m.message}</span>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+            ) : (
+              <div className="px-2 pb-1 space-y-1 border-t border-white/10">
+                {(state?.chat ?? []).slice(-2).map((m, i) => (
+                  <div key={i} className="text-xs leading-tight break-words pt-1">
+                    <span className="text-blue-300 font-semibold">{m.sender}: </span>
+                    <span className="text-gray-200">{m.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-1 p-1.5 border-t border-white/10">
               <input
                 type="text"
