@@ -164,7 +164,6 @@ const lobbyConfig: SceneOverlayConfig = {
     loadingBgClass: 'bg-gray-100',
   },
   backLabel: '← Back to Home',
-  raidLabel: 'RAID',
   loadingText: 'Loading lobby…',
   enemyMaxHp: 10,
   showEnemyAlways: false,

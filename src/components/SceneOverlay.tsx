@@ -63,7 +63,6 @@ export type PreGameRenderOpts = {
 export type SceneOverlayConfig = {
   theme: SceneOverlayTheme;
   backLabel: string;
-  raidLabel: string;
   loadingText: string;
   enemyMaxHp: number;
   /** If true, enemy panel is always shown when an enemy player exists.
@@ -91,7 +90,6 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
   const {
     theme,
     backLabel,
-    raidLabel,
     loadingText,
     enemyMaxHp,
     showEnemyAlways = false,
@@ -486,7 +484,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
                 : 'bg-purple-900/80 text-purple-200 border-purple-700 hover:bg-purple-800/90'
             }`}
           >
-            🏴 {raidLabel}
+            🏴 The Well
           </button>
         </div>
       )}

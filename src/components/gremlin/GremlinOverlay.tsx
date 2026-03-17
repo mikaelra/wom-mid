@@ -44,7 +44,6 @@ const gremlinConfig: SceneOverlayConfig = {
     loadingBgClass: '',
   },
   backLabel: '← Flee the forest',
-  raidLabel: 'The Well',
   loadingText: 'Entering the forest...',
   enemyMaxHp: 5,
   showEnemyAlways: true,
