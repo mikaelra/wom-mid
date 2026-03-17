@@ -56,10 +56,11 @@ function PlayerWithName({
   showAttackButton?: boolean;
   onAttack?: () => void;
 }) {
+  const modelUrl = name === 'TURTLE' ? '/models/turtlev01.glb' : '/models/cherub-v01.glb';
   return (
     <group position={position} rotation={rotation}>
       <PlayerV1
-        url="/models/cherub-v01.glb"
+        url={modelUrl}
         scale={0.6}
         position={[0, 0, 0]}
         rotation={[0, 0, 0]}
@@ -193,6 +194,7 @@ function LostSoulModel({
 
 useGLTF.preload('/models/ghost.glb');
 useGLTF.preload('/models/cherub-v01.glb');
+useGLTF.preload('/models/turtlev01.glb');
 
 type LobbySceneProps = {
   state: LobbyState | null;
