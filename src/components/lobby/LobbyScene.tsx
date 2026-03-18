@@ -312,9 +312,7 @@ export default function LobbyScene({ state, playerName, lobbyId }: LobbyScenePro
         const isWinner = winner === player.name;
         const isOpponent = player.name !== playerName;
         const isBoss = !!player.boss;
-        const playerRotation: [number, number, number] = player.name === playerName
-          ? [rotation[0], rotation[1] + Math.PI / 2, rotation[2]]
-          : rotation;
+        const playerRotation: [number, number, number] = [rotation[0], rotation[1] + Math.PI / 2, rotation[2]];
         return (
           <PlayerWithName
             key={player.name}
