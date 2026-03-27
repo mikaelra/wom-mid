@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  getState,
   getNextRaidTime,
   getPlayerMessages,
   requestReplay,
@@ -168,16 +167,17 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
     onStateChange?.(state);
   }, [state, onStateChange]);
 
-  // Poll state while in the pre-game lobby (round === 0) so newly joined
-  // players appear without waiting for the next socket broadcast.
+  // While waiting in the pre-game lobby, periodically re-emit join_room so the
+  // server sends back the current state. This catches new players joining when
+  // the server doesn't broadcast state_update to existing room members on join.
   const gameStarted = (state?.round ?? 0) > 0;
   useEffect(() => {
-    if (!lobbyId || gameStarted) return;
+    if (!lobbyId || !playerName || gameStarted) return;
     const interval = setInterval(() => {
-      getState(lobbyId).then(setState).catch(() => {});
+      getSocket().emit("join_room", { lobby_id: lobbyId, name: playerName });
     }, 3000);
     return () => clearInterval(interval);
-  }, [lobbyId, gameStarted]);
+  }, [lobbyId, playerName, gameStarted]);
 
   useEffect(() => {
     if (!state?.round_end_time) {
