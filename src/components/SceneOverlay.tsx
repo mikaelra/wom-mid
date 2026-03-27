@@ -14,6 +14,7 @@ import {
   getPlayerMessages,
   requestReplay,
   sendMessage,
+  getSocket,
 } from '@/lib/api';
 import type { LobbyState, Player } from '@/types/game';
 import FloatingMessage from '@/components/lobby/FloatingMessage';
@@ -143,19 +144,23 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
   }, [lobbyId]);
 
   useEffect(() => {
-    if (!lobbyId) return;
-    const fetchState = async () => {
-      try {
-        const json = await getState(lobbyId);
-        setState(json);
-      } catch (e) {
-        console.warn('get_state failed', e);
-      }
+    if (!lobbyId || !playerName) return;
+    const sock = getSocket();
+
+    sock.emit("join_room", { lobby_id: lobbyId, name: playerName });
+
+    sock.on("state_update", (data) => {
+      setState(data);
+    });
+
+    sock.on("error", (data) => {
+      console.error("Socket error:", data.message);
+    });
+
+    return () => {
+      // Don't disconnect, as it's shared
     };
-    fetchState();
-    const interval = setInterval(fetchState, 2000);
-    return () => clearInterval(interval);
-  }, [lobbyId]);
+  }, [lobbyId, playerName]);
 
   useEffect(() => {
     onStateChange?.(state);
