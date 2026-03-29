@@ -15,11 +15,11 @@ DONE:
 - [x] Step 8: Types — LobbyState and ChatMessage already match backend payload
 - [x] Step 9 (partial): Old REST functions removed for migrated actions (startGame, submitChoice,
         submitDenyTarget, kickPlayer, addDummy, sendMessage are gone from api.ts)
+- [x] Step 7: Custom useSocket hook — implemented
 - [x] Step 11: GremlinOverlay — reuses SceneOverlay, inherits socket behavior
 
 NOT DONE:
 - [ ] Step 6: City chat (join_city, city_message) — city chat is a post-alpha feature
-- [ ] Step 7: Custom useSocket hook — not created; socket logic in SceneOverlay + api.ts works fine
 
 REMAINING REST FUNCTIONS IN api.ts (intentionally kept):
 - getState — kept as fallback, not actively used by the frontend
