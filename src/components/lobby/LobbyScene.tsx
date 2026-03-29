@@ -262,10 +262,11 @@ type LobbySceneProps = {
   playerName: string;
   lobbyId: string;
   currentAction?: string;
-  onAttackSelect?: () => void;
+  attackTarget?: string;
+  onAttackSelect?: (target: string) => void;
 };
 
-export default function LobbyScene({ state, playerName, lobbyId, currentAction, onAttackSelect }: LobbySceneProps) {
+export default function LobbyScene({ state, playerName, lobbyId, currentAction, attackTarget, onAttackSelect }: LobbySceneProps) {
   const allPlayers = state?.players ?? [];
   const lostSouls = allPlayers.filter((p) => p.lost_soul);
   // Sort so current player is slot 0 (near camera) and boss is slot 1 (far side of table)
@@ -300,7 +301,7 @@ export default function LobbyScene({ state, playerName, lobbyId, currentAction, 
 
   const handleAttack = (targetName: string) => {
     getSocket().emit('submit_choice', { lobby_id: lobbyId, player: playerName, action: 'attack', target: targetName, resource: '' });
-    onAttackSelect?.();
+    onAttackSelect?.(targetName);
   };
 
   return (
@@ -334,7 +335,7 @@ export default function LobbyScene({ state, playerName, lobbyId, currentAction, 
             isBoss={isBoss}
             showAttackButton={showAttackButtons && isOpponent && !isDead && !isBoss}
             onAttack={() => handleAttack(player.name)}
-            isAttackSelected={currentAction === 'attack'}
+            isAttackSelected={currentAction === 'attack' && attackTarget === player.name}
             chatBubble={chatBubbles.get(player.name)}
           />
         );
@@ -350,7 +351,7 @@ export default function LobbyScene({ state, playerName, lobbyId, currentAction, 
             position={pos}
             showAttackButton={showAttackButtons && !isDead}
             onAttack={() => handleAttack(soul.name)}
-            isAttackSelected={currentAction === 'attack'}
+            isAttackSelected={currentAction === 'attack' && attackTarget === soul.name}
           />
         );
       })}

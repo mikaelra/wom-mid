@@ -15,6 +15,7 @@ export default function LobbyPage() {
   const [lobbyState, setLobbyState] = useState<import('@/types/game').LobbyState | null>(null);
   const [playerName, setPlayerName] = useState('');
   const [sharedAction, setSharedAction] = useState('');
+  const [sharedAttackTarget, setSharedAttackTarget] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -25,6 +26,7 @@ export default function LobbyPage() {
   // Reset shared action at the start of each new round
   useEffect(() => {
     setSharedAction('');
+    setSharedAttackTarget('');
   }, [lobbyState?.round]);
 
   if (!lobbyId) {
@@ -41,7 +43,7 @@ export default function LobbyPage() {
         camera={{ position: [33, 26, 33], fov: BASE_FOV }}
         style={{ position: 'absolute', inset: 0 }}
       >
-        <LobbyScene state={lobbyState} playerName={playerName} lobbyId={lobbyId} currentAction={sharedAction} onAttackSelect={() => setSharedAction('attack')} />
+        <LobbyScene state={lobbyState} playerName={playerName} lobbyId={lobbyId} currentAction={sharedAction} attackTarget={sharedAttackTarget} onAttackSelect={(target) => { setSharedAction('attack'); setSharedAttackTarget(target); }} />
       </Canvas>
       <LobbyOverlay lobbyId={lobbyId} onStateChange={setLobbyState} externalAction={sharedAction} onActionChange={setSharedAction} />
     </div>
