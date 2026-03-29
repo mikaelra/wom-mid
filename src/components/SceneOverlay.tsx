@@ -268,6 +268,13 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
   const eligibleTargets = state?.players.filter((p) => p.name !== playerName && p.hp > 0) ?? [];
   const showActions = !gameOver && !isDenied && isAlive && !myPlayer?.spectator && gameStarted;
 
+  const needsAction   = action === '' && showActions;
+  const needsResource = resource === '' && showActions;
+  const isGoldWarn    = secondsLeft !== null && secondsLeft <= 10 && secondsLeft > 5;
+  const isRedWarn     = secondsLeft !== null && secondsLeft <= 5;
+  const actionCue   = needsAction   ? (isRedWarn ? 'warn-blink-red' : isGoldWarn ? 'warn-blink-gold' : '') : '';
+  const resourceCue = needsResource ? (isRedWarn ? 'warn-blink-red' : isGoldWarn ? 'warn-blink-gold' : '') : '';
+
   const handleStartGame = () => {
     getSocket().emit('start_game', { lobby_id: lobbyId, admin: playerName });
   };
@@ -515,7 +522,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
               <button
                 type="button"
                 onClick={() => handleAction('attack')}
-                className={`${btn} text-sm backdrop-blur-sm shadow-lg mt-2 ${
+                className={`${btn} text-sm backdrop-blur-sm shadow-lg mt-2 ${actionCue} ${
                   action === 'attack'
                     ? 'bg-red-600 text-white border-red-400'
                     : 'bg-red-900/80 text-red-200 border-red-700 hover:bg-red-800/90'
@@ -537,7 +544,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
           <button
             type="button"
             onClick={() => handleAction('raid')}
-            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
+            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${actionCue} ${
               action === 'raid'
                 ? 'bg-purple-600 text-white border-purple-400'
                 : 'bg-purple-900/80 text-purple-200 border-purple-700 hover:bg-purple-800/90'
@@ -574,7 +581,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
           <button
             type="button"
             onClick={() => handleAction('defend')}
-            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${
+            className={`${btn} text-sm backdrop-blur-sm shadow-lg ${actionCue} ${
               action === 'defend'
                 ? 'bg-blue-600 text-white border-blue-400'
                 : 'bg-blue-900/80 text-blue-200 border-blue-700 hover:bg-blue-800/90'
@@ -597,6 +604,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
             onClick={() => handleResource('gain_hp')}
             className={`backdrop-blur-sm rounded-lg px-3 py-2 border text-center min-w-[62px] transition-all duration-150
               ${!showActions ? 'opacity-60 cursor-default' : 'cursor-pointer'}
+              ${resourceCue}
               ${resource === 'gain_hp'
                 ? 'bg-red-700/80 border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
                 : 'bg-black/70 border-red-500/50 hover:bg-red-950/80 hover:border-red-400/80 hover:shadow-[0_0_6px_rgba(239,68,68,0.3)]'
@@ -612,6 +620,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
             onClick={() => handleResource('gain_coin')}
             className={`backdrop-blur-sm rounded-lg px-3 py-2 border text-center min-w-[62px] transition-all duration-150
               ${!showActions ? 'opacity-60 cursor-default' : 'cursor-pointer'}
+              ${resourceCue}
               ${resource === 'gain_coin'
                 ? 'bg-yellow-700/80 border-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.5)]'
                 : 'bg-black/70 border-yellow-500/50 hover:bg-yellow-950/80 hover:border-yellow-400/80 hover:shadow-[0_0_6px_rgba(234,179,8,0.3)]'
@@ -630,6 +639,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
                 onClick={() => handleResource('gain_attack')}
                 className={`relative overflow-hidden backdrop-blur-sm rounded-lg px-3 py-2 border text-center min-w-[62px] transition-all duration-150
                   ${!showActions || cannotAffordAtk ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+                  ${cannotAffordAtk ? '' : resourceCue}
                   ${resource === 'gain_attack'
                     ? 'bg-blue-700/80 border-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
                     : 'bg-black/70 border-blue-500/50 hover:bg-blue-950/80 hover:border-blue-400/80 hover:shadow-[0_0_6px_rgba(59,130,246,0.3)]'
