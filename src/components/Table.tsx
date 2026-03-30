@@ -1,6 +1,8 @@
 'use client';
 
+import { useGLTF } from '@react-three/drei';
 import { ThreeEvent } from '@react-three/fiber';
+import { useMemo } from 'react';
 
 type Props = {
   position?: [number, number, number];
@@ -9,14 +11,8 @@ type Props = {
 };
 
 function Table({ position = [0, 0, 0], scale = 1, onClick }: Props) {
-
-  // Table dimensions (scaled) - square, lower legs for seated character
-  const topSize = 1.5 * scale;
-  const topWidth = topSize;
-  const topDepth = topSize;
-  const topHeight = 0.05 * scale;
-  const legHeight = 0.32 * scale;
-  const legThickness = 0.06 * scale;
+  const { scene } = useGLTF('/models/wellv01.glb');
+  const sceneClone = useMemo(() => scene.clone(), [scene]);
 
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
@@ -26,35 +22,17 @@ function Table({ position = [0, 0, 0], scale = 1, onClick }: Props) {
   return (
     <group
       position={position}
+      scale={scale}
       onClick={handleClick}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => { document.body.style.cursor = 'default'; }}
     >
-      {/* Table top */}
-      <mesh castShadow receiveShadow position={[0, legHeight + topHeight / 2, 0]}>
-        <boxGeometry args={[topWidth, topHeight, topDepth]} />
-        <meshStandardMaterial color="#8B4513" />
-      </mesh>
-      {/* Legs */}
-      <mesh castShadow receiveShadow position={[-topWidth / 2 + legThickness / 2, legHeight / 2, -topDepth / 2 + legThickness / 2]}>
-        <boxGeometry args={[legThickness, legHeight, legThickness]} />
-        <meshStandardMaterial color="#654321" />
-      </mesh>
-      <mesh castShadow receiveShadow position={[topWidth / 2 - legThickness / 2, legHeight / 2, -topDepth / 2 + legThickness / 2]}>
-        <boxGeometry args={[legThickness, legHeight, legThickness]} />
-        <meshStandardMaterial color="#654321" />
-      </mesh>
-      <mesh castShadow receiveShadow position={[-topWidth / 2 + legThickness / 2, legHeight / 2, topDepth / 2 - legThickness / 2]}>
-        <boxGeometry args={[legThickness, legHeight, legThickness]} />
-        <meshStandardMaterial color="#654321" />
-      </mesh>
-      <mesh castShadow receiveShadow position={[topWidth / 2 - legThickness / 2, legHeight / 2, topDepth / 2 - legThickness / 2]}>
-        <boxGeometry args={[legThickness, legHeight, legThickness]} />
-        <meshStandardMaterial color="#654321" />
-      </mesh>
+      <primitive object={sceneClone} />
     </group>
   );
 }
+
+useGLTF.preload('/models/wellv01.glb');
 
 export default Table;

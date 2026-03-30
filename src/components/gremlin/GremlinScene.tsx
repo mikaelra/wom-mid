@@ -67,27 +67,10 @@ function Tree({ position }: { position: [number, number, number] }) {
   );
 }
 
-// Placeholder battle table (simple geometry, real model TBD)
 function BattleTable() {
-  return (
-    <group>
-      {/* Top */}
-      <mesh position={[0, 0.84, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.9, 0.9, 0.08, 24]} />
-        <meshStandardMaterial color="#6b3a1f" roughness={0.8} />
-      </mesh>
-      {/* Leg */}
-      <mesh position={[0, 0.42, 0]} castShadow>
-        <cylinderGeometry args={[0.07, 0.1, 0.8, 8]} />
-        <meshStandardMaterial color="#5a3018" roughness={0.9} />
-      </mesh>
-      {/* Base */}
-      <mesh position={[0, 0.06, 0]}>
-        <cylinderGeometry args={[0.35, 0.35, 0.06, 8]} />
-        <meshStandardMaterial color="#5a3018" roughness={0.9} />
-      </mesh>
-    </group>
-  );
+  const { scene } = useGLTF('/models/wellv01.glb');
+  const sceneClone = useMemo(() => scene.clone(), [scene]);
+  return <primitive object={sceneClone} />;
 }
 
 // Tree-stump seat
@@ -423,5 +406,6 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
   );
 }
 
-// Preload frog model
+// Preload models
 useGLTF.preload('/models/frogv01.glb');
+useGLTF.preload('/models/wellv01.glb');
