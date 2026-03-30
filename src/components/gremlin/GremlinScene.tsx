@@ -68,9 +68,9 @@ function Tree({ position }: { position: [number, number, number] }) {
 }
 
 function BattleTable() {
-  const { scene } = useGLTF('/models/wellv01.glb');
+  const { scene } = useGLTF('/models/wellv02.glb');
   const sceneClone = useMemo(() => scene.clone(), [scene]);
-  return <primitive object={sceneClone} scale={1 / 3.33} />;
+  return <primitive object={sceneClone} scale={1 / 9.99} />;
 }
 
 // Tree-stump seat
@@ -408,4 +408,4 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
 
 // Preload models
 useGLTF.preload('/models/frogv01.glb');
-useGLTF.preload('/models/wellv01.glb');
+useGLTF.preload('/models/wellv02.glb');
