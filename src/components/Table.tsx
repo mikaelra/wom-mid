@@ -11,7 +11,7 @@ type Props = {
 };
 
 function Table({ position = [0, 0, 0], scale = 1, onClick }: Props) {
-  const { scene } = useGLTF('/models/wellv01.glb');
+  const { scene } = useGLTF('/models/wellv02.glb');
   const sceneClone = useMemo(() => scene.clone(), [scene]);
 
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
@@ -33,6 +33,6 @@ function Table({ position = [0, 0, 0], scale = 1, onClick }: Props) {
   );
 }
 
-useGLTF.preload('/models/wellv01.glb');
+useGLTF.preload('/models/wellv02.glb');
 
 export default Table;
