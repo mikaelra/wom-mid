@@ -22,7 +22,7 @@ function Table({ position = [0, 0, 0], scale = 1, onClick }: Props) {
   return (
     <group
       position={position}
-      scale={scale}
+      scale={scale * 0.1}
       onClick={handleClick}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
