@@ -108,7 +108,7 @@ function CherubModel({
   );
 }
 
-// The Gremlin character — procedural geometry, seated on far side
+// The Gremlin character — GLB model, seated on far side
 function GremlinModel({
   alive,
   position,
@@ -116,8 +116,22 @@ function GremlinModel({
   alive: boolean;
   position: [number, number, number];
 }) {
+  const { scene } = useGLTF('/models/gremlinv01.glb');
+  const clone = useMemo(() => scene.clone(), [scene]);
   const groupRef = useRef<THREE.Group>(null!);
   const bobRef = useRef(0);
+
+  useEffect(() => {
+    clone.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        if (!alive) {
+          (obj.material as THREE.MeshStandardMaterial).color?.set('#666666');
+        }
+      }
+    });
+  }, [clone, alive]);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -127,70 +141,9 @@ function GremlinModel({
     }
   });
 
-  const bodyColor = alive ? '#2ecc40' : '#666666';
-  const eyeColor = alive ? '#ff4444' : '#333333';
-
   return (
-    // rotation Y = Math.PI so eyes (at +Z on body) face toward the cherub/player
     <group ref={groupRef} position={position} rotation={[0, Math.PI, 0]}>
-      {/* Body */}
-      <mesh position={[0, 0.55, 0]} castShadow>
-        <capsuleGeometry args={[0.3, 0.4, 8, 16]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Head */}
-      <mesh position={[0, 1.15, 0]} castShadow>
-        <sphereGeometry args={[0.3, 16, 16]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Left ear */}
-      <mesh position={[-0.3, 1.4, 0]} rotation={[0, 0, -0.5]} castShadow>
-        <coneGeometry args={[0.1, 0.3, 6]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Right ear */}
-      <mesh position={[0.3, 1.4, 0]} rotation={[0, 0, 0.5]} castShadow>
-        <coneGeometry args={[0.1, 0.3, 6]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Left eye */}
-      <mesh position={[-0.12, 1.2, 0.25]}>
-        <sphereGeometry args={[0.07, 8, 8]} />
-        <meshStandardMaterial
-          color={eyeColor}
-          emissive={alive ? '#ff0000' : '#000'}
-          emissiveIntensity={alive ? 0.5 : 0}
-        />
-      </mesh>
-      {/* Right eye */}
-      <mesh position={[0.12, 1.2, 0.25]}>
-        <sphereGeometry args={[0.07, 8, 8]} />
-        <meshStandardMaterial
-          color={eyeColor}
-          emissive={alive ? '#ff0000' : '#000'}
-          emissiveIntensity={alive ? 0.5 : 0}
-        />
-      </mesh>
-      {/* Left arm */}
-      <mesh position={[-0.4, 0.5, 0]} rotation={[0, 0, -0.3]} castShadow>
-        <capsuleGeometry args={[0.08, 0.3, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Right arm */}
-      <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, 0.3]} castShadow>
-        <capsuleGeometry args={[0.08, 0.3, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Left leg */}
-      <mesh position={[-0.15, 0.1, 0]} castShadow>
-        <capsuleGeometry args={[0.09, 0.2, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Right leg */}
-      <mesh position={[0.15, 0.1, 0]} castShadow>
-        <capsuleGeometry args={[0.09, 0.2, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
+      <primitive object={clone} scale={0.5} />
     </group>
   );
 }
@@ -388,3 +341,4 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
 // Preload models
 useGLTF.preload('/models/frogv01.glb');
 useGLTF.preload('/models/wellv02.glb');
+useGLTF.preload('/models/gremlinv01.glb');
