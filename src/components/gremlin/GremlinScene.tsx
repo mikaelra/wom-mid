@@ -73,23 +73,6 @@ function BattleTable() {
   return <primitive object={sceneClone} scale={1 / 9.99} />;
 }
 
-// Tree-stump seat
-function Stump({ position }: { position: [number, number, number] }) {
-  return (
-    <group position={position}>
-      <mesh position={[0, 0.2, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.22, 0.26, 0.4, 10]} />
-        <meshStandardMaterial color="#5d3a1a" roughness={0.95} />
-      </mesh>
-      {/* Seat ring */}
-      <mesh position={[0, 0.41, 0]}>
-        <cylinderGeometry args={[0.22, 0.22, 0.02, 10]} />
-        <meshStandardMaterial color="#4a2e14" roughness={0.9} />
-      </mesh>
-    </group>
-  );
-}
-
 // Player character — frog GLB model
 function CherubModel({
   position,
@@ -125,7 +108,7 @@ function CherubModel({
   );
 }
 
-// The Gremlin character — procedural geometry, seated on far side
+// The Gremlin character — GLB model, seated on far side
 function GremlinModel({
   alive,
   position,
@@ -133,8 +116,22 @@ function GremlinModel({
   alive: boolean;
   position: [number, number, number];
 }) {
+  const { scene } = useGLTF('/models/gremlinv01.glb');
+  const clone = useMemo(() => scene.clone(), [scene]);
   const groupRef = useRef<THREE.Group>(null!);
   const bobRef = useRef(0);
+
+  useEffect(() => {
+    clone.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        if (!alive) {
+          (obj.material as THREE.MeshStandardMaterial).color?.set('#666666');
+        }
+      }
+    });
+  }, [clone, alive]);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -144,70 +141,9 @@ function GremlinModel({
     }
   });
 
-  const bodyColor = alive ? '#2ecc40' : '#666666';
-  const eyeColor = alive ? '#ff4444' : '#333333';
-
   return (
-    // rotation Y = Math.PI so eyes (at +Z on body) face toward the cherub/player
-    <group ref={groupRef} position={position} rotation={[0, Math.PI, 0]}>
-      {/* Body */}
-      <mesh position={[0, 0.55, 0]} castShadow>
-        <capsuleGeometry args={[0.3, 0.4, 8, 16]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Head */}
-      <mesh position={[0, 1.15, 0]} castShadow>
-        <sphereGeometry args={[0.3, 16, 16]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Left ear */}
-      <mesh position={[-0.3, 1.4, 0]} rotation={[0, 0, -0.5]} castShadow>
-        <coneGeometry args={[0.1, 0.3, 6]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Right ear */}
-      <mesh position={[0.3, 1.4, 0]} rotation={[0, 0, 0.5]} castShadow>
-        <coneGeometry args={[0.1, 0.3, 6]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Left eye */}
-      <mesh position={[-0.12, 1.2, 0.25]}>
-        <sphereGeometry args={[0.07, 8, 8]} />
-        <meshStandardMaterial
-          color={eyeColor}
-          emissive={alive ? '#ff0000' : '#000'}
-          emissiveIntensity={alive ? 0.5 : 0}
-        />
-      </mesh>
-      {/* Right eye */}
-      <mesh position={[0.12, 1.2, 0.25]}>
-        <sphereGeometry args={[0.07, 8, 8]} />
-        <meshStandardMaterial
-          color={eyeColor}
-          emissive={alive ? '#ff0000' : '#000'}
-          emissiveIntensity={alive ? 0.5 : 0}
-        />
-      </mesh>
-      {/* Left arm */}
-      <mesh position={[-0.4, 0.5, 0]} rotation={[0, 0, -0.3]} castShadow>
-        <capsuleGeometry args={[0.08, 0.3, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Right arm */}
-      <mesh position={[0.4, 0.5, 0]} rotation={[0, 0, 0.3]} castShadow>
-        <capsuleGeometry args={[0.08, 0.3, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Left leg */}
-      <mesh position={[-0.15, 0.1, 0]} castShadow>
-        <capsuleGeometry args={[0.09, 0.2, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Right leg */}
-      <mesh position={[0.15, 0.1, 0]} castShadow>
-        <capsuleGeometry args={[0.09, 0.2, 4, 8]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
+    <group ref={groupRef} position={position} rotation={[0, 0, 0]}>
+      <primitive object={clone} scale={1.5} />
     </group>
   );
 }
@@ -388,10 +324,6 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
       {/* Battle table (placeholder) */}
       <BattleTable />
 
-      {/* Seats */}
-      <Stump position={[0, 0, -1.15]} />
-      <Stump position={[0, 0, 1.15]} />
-
       {/* Gremlin — far side of table, facing the player */}
       <GremlinModel alive={gremlinAlive} position={GREMLIN_POS} />
 
@@ -409,3 +341,4 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
 // Preload models
 useGLTF.preload('/models/frogv01.glb');
 useGLTF.preload('/models/wellv02.glb');
+useGLTF.preload('/models/gremlinv01.glb');
