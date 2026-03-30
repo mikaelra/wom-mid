@@ -73,23 +73,6 @@ function BattleTable() {
   return <primitive object={sceneClone} scale={1 / 9.99} />;
 }
 
-// Tree-stump seat
-function Stump({ position }: { position: [number, number, number] }) {
-  return (
-    <group position={position}>
-      <mesh position={[0, 0.2, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.22, 0.26, 0.4, 10]} />
-        <meshStandardMaterial color="#5d3a1a" roughness={0.95} />
-      </mesh>
-      {/* Seat ring */}
-      <mesh position={[0, 0.41, 0]}>
-        <cylinderGeometry args={[0.22, 0.22, 0.02, 10]} />
-        <meshStandardMaterial color="#4a2e14" roughness={0.9} />
-      </mesh>
-    </group>
-  );
-}
-
 // Player character — frog GLB model
 function CherubModel({
   position,
@@ -387,10 +370,6 @@ export default function GremlinScene({ state }: GremlinSceneProps) {
 
       {/* Battle table (placeholder) */}
       <BattleTable />
-
-      {/* Seats */}
-      <Stump position={[0, 0, -1.15]} />
-      <Stump position={[0, 0, 1.15]} />
 
       {/* Gremlin — far side of table, facing the player */}
       <GremlinModel alive={gremlinAlive} position={GREMLIN_POS} />
