@@ -590,6 +590,20 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
       {/* Extra elements slot (e.g. scene-specific buttons) */}
       {renderExtra?.({ gameOver, btn })}
 
+      {/* Player nametag */}
+      {myPlayer && (
+        <div
+          className="absolute"
+          style={{ top: '59%', left: '50%', transform: 'translate(-50%, -50%)' }}
+        >
+          <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-center border border-blue-500/30">
+            <p className="text-blue-200 font-bold text-sm">
+              {state.raidwinner === playerName ? '👑 ' : ''}{playerName}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Center-screen replay overlay — shown when game is over */}
       {gameOver && (
         <div
@@ -614,20 +628,6 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
               {replayVoted ? '☑ REPLAY' : '☐ REPLAY'}
             </button>
           )}
-        </div>
-      )}
-
-      {/* Player nametag */}
-      {myPlayer && (
-        <div
-          className="absolute"
-          style={{ top: '59%', left: '50%', transform: 'translate(-50%, -50%)' }}
-        >
-          <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-center border border-blue-500/30">
-            <p className="text-blue-200 font-bold text-sm">
-              {state.raidwinner === playerName ? '👑 ' : ''}{playerName}
-            </p>
-          </div>
         </div>
       )}
 
