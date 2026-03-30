@@ -591,21 +591,25 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
       {renderExtra?.({ gameOver, btn })}
 
       {/* Center-screen replay overlay — shown when game is over */}
-      {gameOver && typeof state.replay_votes_needed === 'number' && state.replay_votes_needed > 0 && (
+      {gameOver && (
         <div
           className="absolute pointer-events-auto text-center"
-          style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          style={{ top: '59%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
           {isAdmin ? (
-            <p className="text-orange-400 font-bold text-2xl drop-shadow-lg">
-              {state.replay_votes_count ?? 0} / {state.replay_votes_needed}
+            <p
+              className="text-orange-400 font-bold drop-shadow-lg"
+              style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '28px' }}
+            >
+              {state.replay_votes_count ?? 0} / {state.players.filter((p) => !p.admin && !p.spectator && !p.boss).length}
             </p>
           ) : (
             <button
               type="button"
               disabled={replayVoted || replayLoading}
               onClick={handleReplay}
-              className="text-green-400 font-bold text-2xl drop-shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-green-400 font-bold drop-shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '28px' }}
             >
               {replayVoted ? '☑ REPLAY' : '☐ REPLAY'}
             </button>
