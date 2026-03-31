@@ -33,20 +33,15 @@ function renderGameOver({ state, playerName, btn, replayVoted, replayLoading, on
         <Link href="/" className="text-blue-400 hover:underline font-medium">
           ← Back to Home
         </Link>
-        {typeof state.replay_votes_needed === 'number' && state.replay_votes_needed > 0 && (
-          <>
-            <p className="text-sm text-gray-400">
-              {state.replay_votes_count ?? 0} / {state.replay_votes_needed} ready to replay
-            </p>
-            <button
-              type="button"
-              disabled={replayVoted || replayLoading}
-              onClick={onReplay}
-              className={`${btn} bg-green-600 text-white border-green-500 disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {replayVoted ? 'Voted to replay' : replayLoading ? '…' : 'Replay'}
-            </button>
-          </>
+        {state.gameover && (
+          <button
+            type="button"
+            disabled={replayVoted || replayLoading}
+            onClick={onReplay}
+            className={`${btn} bg-green-600 text-white border-green-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {replayVoted ? 'Voted to replay' : replayLoading ? '…' : 'Replay'}
+          </button>
         )}
       </div>
     </div>
