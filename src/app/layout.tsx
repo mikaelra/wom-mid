@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import dynamic from "next/dynamic";
 import MusicPlayer from "@/components/MusicPlayer";
 import "./globals.css";
+
+const LoadingScreen = dynamic(() => import("@/components/LoadingScreen"), {
+  ssr: false,
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +36,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <LoadingScreen />
         <MusicPlayer />
         {children}
       </body>
