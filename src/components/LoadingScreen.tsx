@@ -1,60 +1,36 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { useState, useEffect } from 'react';
 import { useProgress } from '@react-three/drei';
-import * as THREE from 'three';
 
-function SpinningOctahedron() {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  useFrame((_state, delta) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.x += delta * 1.0;
-      meshRef.current.rotation.y += delta * 1.4;
-    }
-  });
-
-  return (
-    <mesh ref={meshRef}>
-      <octahedronGeometry args={[1, 0]} />
-      <meshStandardMaterial
-        color="#FF9500"
-        emissive="#FF6000"
-        emissiveIntensity={0.4}
-        metalness={0.1}
-        roughness={0.3}
-      />
-    </mesh>
-  );
-}
-
-function DotsText() {
-  const [dotCount, setDotCount] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDotCount(d => (d + 1) % 4);
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <p
-      style={{
-        color: '#888888',
-        fontSize: '1.1rem',
-        letterSpacing: '0.1em',
-        fontFamily: 'var(--font-geist-sans, sans-serif)',
-        marginTop: '1.5rem',
-        width: '8ch',
-        textAlign: 'left',
-      }}
-    >
-      {'Loading' + '.'.repeat(dotCount)}
-    </p>
-  );
-}
+const STYLES = `
+  @keyframes wom-octa-spin {
+    from { transform: rotate(45deg) rotateY(0deg) rotateX(12deg); }
+    to   { transform: rotate(45deg) rotateY(360deg) rotateX(12deg); }
+  }
+  @keyframes wom-dot-1 {
+    0%    { opacity: 1; }
+    75%   { opacity: 1; }
+    75.1% { opacity: 0; }
+    100%  { opacity: 0; }
+  }
+  @keyframes wom-dot-2 {
+    0%    { opacity: 0; }
+    25%   { opacity: 0; }
+    25.1% { opacity: 1; }
+    75%   { opacity: 1; }
+    75.1% { opacity: 0; }
+    100%  { opacity: 0; }
+  }
+  @keyframes wom-dot-3 {
+    0%    { opacity: 0; }
+    50%   { opacity: 0; }
+    50.1% { opacity: 1; }
+    75%   { opacity: 1; }
+    75.1% { opacity: 0; }
+    100%  { opacity: 0; }
+  }
+`;
 
 export default function LoadingScreen() {
   const { progress, active, total } = useProgress();
@@ -62,9 +38,7 @@ export default function LoadingScreen() {
   const [hasStartedLoading, setHasStartedLoading] = useState(false);
 
   useEffect(() => {
-    if (active && total > 0) {
-      setHasStartedLoading(true);
-    }
+    if (active && total > 0) setHasStartedLoading(true);
   }, [active, total]);
 
   useEffect(() => {
@@ -74,7 +48,6 @@ export default function LoadingScreen() {
     }
   }, [hasStartedLoading, active, progress]);
 
-  // Fallback: hide after 8s even if progress tracking doesn't fire
   useEffect(() => {
     const timer = setTimeout(() => setVisible(false), 8000);
     return () => clearTimeout(timer);
@@ -83,27 +56,51 @@ export default function LoadingScreen() {
   if (!visible) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: '#0a0a0a',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-      }}
-    >
-      <div style={{ width: 220, height: 220 }}>
-        <Canvas camera={{ position: [0, 0, 3.5], fov: 45 }}>
-          <ambientLight intensity={0.6} />
-          <pointLight position={[4, 4, 4]} intensity={2} color="#FFD080" />
-          <pointLight position={[-4, -2, 2]} intensity={0.8} color="#FF6030" />
-          <SpinningOctahedron />
-        </Canvas>
+    <>
+      <style>{STYLES}</style>
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#0a0a0a',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }}
+      >
+        {/* 3D spinning octahedron using CSS perspective + diamond shape */}
+        <div style={{ perspective: '400px', width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            style={{
+              width: 100,
+              height: 100,
+              background: 'linear-gradient(135deg, #FFD000 0%, #FF8C00 50%, #FF4500 100%)',
+              animation: 'wom-octa-spin 2s linear infinite',
+              boxShadow: '0 0 30px rgba(255, 140, 0, 0.55)',
+            }}
+          />
+        </div>
+
+        {/* Loading text with animated dots */}
+        <p
+          style={{
+            color: '#888888',
+            fontSize: '1.1rem',
+            letterSpacing: '0.08em',
+            fontFamily: 'var(--font-geist-sans, sans-serif)',
+            marginTop: '1rem',
+            display: 'flex',
+            alignItems: 'baseline',
+          }}
+        >
+          Loading
+          <span style={{ animation: 'wom-dot-1 2s linear infinite', marginLeft: 1 }}>.</span>
+          <span style={{ animation: 'wom-dot-2 2s linear infinite' }}>.</span>
+          <span style={{ animation: 'wom-dot-3 2s linear infinite' }}>.</span>
+        </p>
       </div>
-      <DotsText />
-    </div>
+    </>
   );
 }
