@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import MusicPlayer from "@/components/MusicPlayer";
+import LoadingScreen from "@/components/LoadingScreenWrapper";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +32,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* Server-rendered dark overlay prevents content blink before JS hydrates */}
+        <div
+          id="wom-initial-overlay"
+          style={{ position: 'fixed', inset: 0, background: '#0a0a0a', zIndex: 9998, pointerEvents: 'none' }}
+        />
+        <LoadingScreen />
         <MusicPlayer />
         {children}
       </body>
