@@ -114,15 +114,11 @@ export async function getPlayerMessages(
 }
 
 
-export async function requestReplay(lobbyId: string, player: string): Promise<{ next_lobby_id?: string }> {
-  const res = await fetch(`${BACKEND_URL}/request_replay/${lobbyId}`, {
+export async function voteReplay(lobbyId: string, player: string): Promise<void> {
+  // Errors are delivered via Socket.IO 'error' event; HTTP response is ignored
+  await fetch(`${BACKEND_URL}/vote_replay`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ player }),
+    body: JSON.stringify({ lobby_id: lobbyId, name: player }),
   });
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error((data as { error?: string }).error ?? "Failed to vote");
-  }
-  return res.json();
 }
