@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import dynamic from "next/dynamic";
 import MusicPlayer from "@/components/MusicPlayer";
+import LoadingScreen from "@/components/LoadingScreenWrapper";
 import "./globals.css";
-
-const LoadingScreen = dynamic(() => import("@/components/LoadingScreen"), {
-  ssr: false,
-});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
