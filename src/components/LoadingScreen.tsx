@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { useProgress } from '@react-three/drei';
+import * as THREE from 'three';
 
 const STYLES = `
-  @keyframes wom-octa-spin {
-    from { transform: rotate(45deg) rotateY(0deg) rotateX(12deg); }
-    to   { transform: rotate(45deg) rotateY(360deg) rotateX(12deg); }
-  }
   @keyframes wom-dot-1 {
     0%    { opacity: 1; }
     75%   { opacity: 1; }
@@ -32,6 +30,40 @@ const STYLES = `
   }
 `;
 
+function SpinningOctahedron() {
+  const groupRef = useRef<THREE.Group>(null);
+
+  const geo = useMemo(() => new THREE.OctahedronGeometry(1, 0), []);
+  const edgesGeo = useMemo(() => new THREE.EdgesGeometry(geo), [geo]);
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    const t = state.clock.elapsedTime;
+    // Organic spin: base rate modulated by slow sine waves on each axis
+    groupRef.current.rotation.x += delta * (0.35 + 0.28 * Math.sin(t * 0.53));
+    groupRef.current.rotation.y += delta * (0.60 + 0.40 * Math.sin(t * 0.37));
+    groupRef.current.rotation.z += delta * (0.10 + 0.18 * Math.sin(t * 0.81));
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh geometry={geo}>
+        <meshStandardMaterial
+          color="#FF9200"
+          emissive="#FF5200"
+          emissiveIntensity={0.38}
+          metalness={0.15}
+          roughness={0.30}
+        />
+      </mesh>
+      {/* Grey edge lines at every edge of the octahedron */}
+      <lineSegments geometry={edgesGeo}>
+        <lineBasicMaterial color="#aaaaaa" />
+      </lineSegments>
+    </group>
+  );
+}
+
 export default function LoadingScreen() {
   const { progress, active, total } = useProgress();
   const [visible, setVisible] = useState(true);
@@ -48,6 +80,7 @@ export default function LoadingScreen() {
     }
   }, [hasStartedLoading, active, progress]);
 
+  // Fallback: hide after 8 s if progress tracking never fires (cached assets)
   useEffect(() => {
     const timer = setTimeout(() => setVisible(false), 8000);
     return () => clearTimeout(timer);
@@ -70,27 +103,45 @@ export default function LoadingScreen() {
           zIndex: 9999,
         }}
       >
-        {/* 3D spinning octahedron using CSS perspective + diamond shape */}
-        <div style={{ perspective: '400px', width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div
-            style={{
-              width: 100,
-              height: 100,
-              background: 'linear-gradient(135deg, #FFD000 0%, #FF8C00 50%, #FF4500 100%)',
-              animation: 'wom-octa-spin 2s linear infinite',
-              boxShadow: '0 0 30px rgba(255, 140, 0, 0.55)',
-            }}
-          />
+        {/* Title — matches the globe scene style */}
+        <p
+          style={{
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: '0.9rem',
+            fontWeight: 300,
+            letterSpacing: '0.3em',
+            textTransform: 'uppercase',
+            marginBottom: '1.5rem',
+            fontFamily: 'var(--font-geist-sans, sans-serif)',
+            textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+          }}
+        >
+          World of Mythos
+        </p>
+
+        {/* R3F canvas — isolated, transparent background */}
+        <div style={{ width: 220, height: 220, flexShrink: 0 }}>
+          <Canvas
+            camera={{ position: [0, 0, 3.5], fov: 45 }}
+            gl={{ antialias: true, alpha: true }}
+            style={{ width: '100%', height: '100%', display: 'block' }}
+            frameloop="always"
+          >
+            <ambientLight intensity={0.55} />
+            <pointLight position={[4, 4, 4]} intensity={2.2} color="#FFD080" />
+            <pointLight position={[-3, -2, 2]} intensity={0.9} color="#FF6030" />
+            <SpinningOctahedron />
+          </Canvas>
         </div>
 
-        {/* Loading text with animated dots */}
+        {/* Loading text with CSS-animated dots */}
         <p
           style={{
             color: '#888888',
             fontSize: '1.1rem',
             letterSpacing: '0.08em',
             fontFamily: 'var(--font-geist-sans, sans-serif)',
-            marginTop: '1rem',
+            marginTop: '1.25rem',
             display: 'flex',
             alignItems: 'baseline',
           }}
