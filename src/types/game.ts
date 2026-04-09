@@ -1,6 +1,7 @@
 export interface Player {
   name: string;
   admin: boolean;
+  bot?: boolean;
   hp: number;
   coins: number;
   attackDamage: number;
@@ -36,8 +37,7 @@ export interface LobbyState {
   boss_fight: boolean | null;
   gremlin_fight?: boolean | null;
   gameover: boolean | null;
-  replay_votes_count?: number;
-  replay_votes_needed?: number;
+  replay_votes?: string[];
   next_lobby_id?: string | null;
   chat?: ChatMessage[];
 }

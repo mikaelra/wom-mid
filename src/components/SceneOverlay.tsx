@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   getNextRaidTime,
   getPlayerMessages,
-  requestReplay,
+  voteReplay,
   getSocket,
 } from '@/lib/api';
 import type { LobbyState, Player } from '@/types/game';
@@ -110,7 +110,6 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
   const [action, setAction] = useState('');
   const [resource, setResource] = useState('');
   const [denyTarget, setDenyTarget] = useState('');
-  const [replayVoted, setReplayVoted] = useState(false);
   const [replayLoading, setReplayLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [floatingMessages, setFloatingMessages] = useState<string[]>([]);
@@ -139,7 +138,6 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
 
   useEffect(() => {
     setState(null);
-    setReplayVoted(false);
     setFloatingMessages([]);
     setMessages([]);
   }, [lobbyId]);
@@ -272,6 +270,7 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
   }, [messages, messagesExpanded]);
 
   const isAdmin = myPlayer?.admin ?? false;
+  const replayVoted = state?.replay_votes?.includes(playerName) ?? false;
   const enemy = state?.players.find((p) => p.boss);
   const isDenied = playerName === state?.deny_target;
   const isChoosingDeny = showDenyPicker && state?.pending_deny === playerName;
@@ -321,15 +320,10 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
   };
 
   const handleReplay = async () => {
+    if (replayLoading || replayVoted) return;
     setReplayLoading(true);
     try {
-      const data = await requestReplay(lobbyId, playerName);
-      setReplayVoted(true);
-      if (data.next_lobby_id) {
-        setState((s) => (s ? { ...s, next_lobby_id: data.next_lobby_id } : s));
-      }
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to vote for replay');
+      await voteReplay(lobbyId, playerName);
     } finally {
       setReplayLoading(false);
     }
@@ -608,6 +602,41 @@ export default function SceneOverlay({ lobbyId, onStateChange, config, renderPre
               {state.raidwinner === playerName ? '👑 ' : ''}{playerName}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Replay overlay — shown below the dialogue box when game is over */}
+      {gameOver && (
+        <div
+          className="absolute pointer-events-auto text-center"
+          style={{ top: '28%', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          {isAdmin ? (
+            <p
+              className="text-orange-400 font-bold"
+              style={{
+                fontFamily: "'Times New Roman', Times, serif",
+                fontSize: '28px',
+                textShadow: '0 0 8px #000, 0 0 16px #000, 0 0 24px #000',
+              }}
+            >
+              {state.replay_votes?.length ?? 0} / {state.players.filter((p) => !p.bot && !p.spectator && !p.boss && !p.admin).length}
+            </p>
+          ) : (
+            <button
+              type="button"
+              disabled={replayVoted || replayLoading}
+              onClick={handleReplay}
+              className="text-green-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                fontFamily: "'Times New Roman', Times, serif",
+                fontSize: '28px',
+                textShadow: '0 0 8px #000, 0 0 16px #000, 0 0 24px #000',
+              }}
+            >
+              {replayVoted ? 'REPLAY? ☑' : 'REPLAY? ☐'}
+            </button>
+          )}
         </div>
       )}
 
