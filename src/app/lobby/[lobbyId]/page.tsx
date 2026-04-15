@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import LobbyOverlay, { renderPreGame } from '@/components/lobby/LobbyOverlay';
 import { btn } from '@/components/SceneOverlay';
 import { BASE_FOV } from '@/lib/sceneConstants';
@@ -13,8 +12,23 @@ import type { LobbyState } from '@/types/game';
 
 const LobbyScene = dynamic(() => import('@/components/lobby/LobbyScene'), { ssr: false });
 
+const EMPTY_PREVIEW: LobbyState = {
+  round: 0,
+  players: [],
+  winner: null,
+  raidwinner: null,
+  pending_deny: null,
+  deny_target: null,
+  readyPlayers: [],
+  round_end_time: null,
+  start_time: 0,
+  boss_fight: null,
+  gameover: null,
+};
+
 export default function LobbyPage() {
   const params = useParams();
+  const router = useRouter();
   const lobbyId = params?.lobbyId as string | undefined;
   const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
   const [playerName, setPlayerName] = useState('');
@@ -77,7 +91,8 @@ export default function LobbyPage() {
     );
   }
 
-  const gameAlreadyStarted = (previewState?.round ?? 0) > 0;
+  const displayState = previewState ?? EMPTY_PREVIEW;
+  const gameAlreadyStarted = displayState.round > 0;
   const showJoinOverlay = playerNameInit && !playerName;
   const sceneState = playerName ? lobbyState : previewState;
 
@@ -106,15 +121,16 @@ export default function LobbyPage() {
         />
       )}
 
-      {/* Pre-game lobby view in background — visible to the visitor before they enter a name */}
-      {showJoinOverlay && previewState && !gameAlreadyStarted && (
-        <div className="absolute inset-0 z-10 overflow-y-auto">
+      {/* Pre-game lobby view — always visible to the visitor as background, pointer-events
+          disabled so only the modal above handles interactions */}
+      {showJoinOverlay && !gameAlreadyStarted && (
+        <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
           {renderPreGame({
-            state: previewState,
+            state: displayState,
             lobbyId: lobbyId,
             playerName: '',
             isAdmin: false,
-            boss: previewState.players.find((p) => p.boss),
+            boss: displayState.players.find((p) => p.boss),
             raidMins: null,
             raidSecs: null,
             btn,
@@ -127,16 +143,20 @@ export default function LobbyPage() {
         </div>
       )}
 
-      {/* Name-entry modal — always on top when not logged in */}
+      {/* Name-entry modal — sits on top of the pre-game overlay */}
       {showJoinOverlay && (
         <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-[2px]">
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
             {gameAlreadyStarted ? (
               <>
                 <p className="text-gray-700 text-center mb-4">This game is already in progress.</p>
-                <Link href="/" className="block text-center text-blue-500 hover:underline text-sm">
+                <button
+                  type="button"
+                  onClick={() => router.push('/')}
+                  className="block w-full text-center text-blue-500 hover:underline text-sm bg-transparent border-none cursor-pointer"
+                >
                   ← Back to Home
-                </Link>
+                </button>
               </>
             ) : (
               <>
@@ -161,9 +181,13 @@ export default function LobbyPage() {
                 >
                   {joinLoading ? 'Joining…' : 'Join Lobby'}
                 </button>
-                <Link href="/" className="block text-center text-blue-400 hover:underline text-sm">
+                <button
+                  type="button"
+                  onClick={() => router.push('/')}
+                  className="block w-full text-center text-blue-400 hover:underline text-sm bg-transparent border-none cursor-pointer"
+                >
                   ← Back to Home
-                </Link>
+                </button>
               </>
             )}
           </div>
