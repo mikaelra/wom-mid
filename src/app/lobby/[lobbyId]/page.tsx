@@ -72,7 +72,7 @@ export default function LobbyPage() {
 
   const gameAlreadyStarted = (previewState?.round ?? 0) > 0;
   const showJoinOverlay = playerNameInit && !playerName;
-  const adminName = previewState?.players.find((p) => p.admin)?.name ?? null;
+  const playerList = previewState?.players.map((p) => p.name).join(', ') ?? '';
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
@@ -117,8 +117,8 @@ export default function LobbyPage() {
               <>
                 <h1 className="text-2xl font-bold mb-1">Join Lobby</h1>
                 <p className="text-gray-400 text-xs mb-1">Code: {lobbyId}</p>
-                {adminName && (
-                  <p className="text-gray-500 text-sm mb-4">Hosted by {adminName}</p>
+                {playerList && (
+                  <p className="text-gray-500 text-sm mb-4">Player(s): {playerList}</p>
                 )}
                 <input
                   type="text"
