@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import LobbyOverlay from '@/components/lobby/LobbyOverlay';
 import { BASE_FOV } from '@/lib/sceneConstants';
-import { getState, joinLobby } from '@/lib/api';
+import { getSocket, joinLobby } from '@/lib/api';
 import type { LobbyState } from '@/types/game';
 
 const LobbyScene = dynamic(() => import('@/components/lobby/LobbyScene'), { ssr: false });
@@ -34,14 +34,16 @@ export default function LobbyPage() {
     }
   }, []);
 
-  // Poll lobby state for background preview when not logged in
+  // Subscribe to socket state updates for background preview when not logged in
   useEffect(() => {
     if (!lobbyId || !playerNameInit || playerName) return;
-    const fetchPreview = () =>
-      getState(lobbyId).then(setPreviewState).catch(() => {});
-    fetchPreview();
-    const id = setInterval(fetchPreview, 3000);
-    return () => clearInterval(id);
+    const sock = getSocket();
+    const handleStateUpdate = (data: LobbyState) => setPreviewState(data);
+    sock.on('state_update', handleStateUpdate);
+    sock.emit('join_room', { lobby_id: lobbyId, name: '' });
+    return () => {
+      sock.off('state_update', handleStateUpdate);
+    };
   }, [lobbyId, playerNameInit, playerName]);
 
   // Reset shared action at the start of each new round
