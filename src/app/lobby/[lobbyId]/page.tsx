@@ -6,7 +6,7 @@ import { Canvas } from '@react-three/fiber';
 import dynamic from 'next/dynamic';
 import LobbyOverlay from '@/components/lobby/LobbyOverlay';
 import { BASE_FOV } from '@/lib/sceneConstants';
-import { joinLobby, getState } from '@/lib/api';
+import { getSocket, joinLobby } from '@/lib/api';
 import type { LobbyState } from '@/types/game';
 
 const LobbyScene = dynamic(() => import('@/components/lobby/LobbyScene'), { ssr: false });
@@ -34,10 +34,16 @@ export default function LobbyPage() {
     }
   }, []);
 
-  // Fetch lobby state once to get admin name and check if game started
+  // Subscribe to socket state updates for preview when not logged in
   useEffect(() => {
     if (!lobbyId || !playerNameInit || playerName) return;
-    getState(lobbyId).then(setPreviewState).catch(() => {});
+    const sock = getSocket();
+    const handleStateUpdate = (data: LobbyState) => setPreviewState(data);
+    sock.on('state_update', handleStateUpdate);
+    sock.emit('join_room', { lobby_id: lobbyId, name: '' });
+    return () => {
+      sock.off('state_update', handleStateUpdate);
+    };
   }, [lobbyId, playerNameInit, playerName]);
 
   // Reset shared action at the start of each new round
