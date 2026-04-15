@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import LobbyOverlay from '@/components/lobby/LobbyOverlay';
+import LobbyOverlay, { renderPreGame } from '@/components/lobby/LobbyOverlay';
+import { btn } from '@/components/SceneOverlay';
 import { BASE_FOV } from '@/lib/sceneConstants';
 import { getSocket, joinLobby } from '@/lib/api';
 import type { LobbyState } from '@/types/game';
@@ -105,8 +106,30 @@ export default function LobbyPage() {
         />
       )}
 
+      {/* Pre-game lobby view in background — visible to the visitor before they enter a name */}
+      {showJoinOverlay && previewState && !gameAlreadyStarted && (
+        <div className="absolute inset-0 z-10 overflow-y-auto">
+          {renderPreGame({
+            state: previewState,
+            lobbyId: lobbyId,
+            playerName: '',
+            isAdmin: false,
+            boss: previewState.players.find((p) => p.boss),
+            raidMins: null,
+            raidSecs: null,
+            btn,
+            onStartGame: () => {},
+            onAddDummy: () => {},
+            onKick: () => {},
+            floatingMessages: [],
+            onDoneFloating: () => {},
+          })}
+        </div>
+      )}
+
+      {/* Name-entry modal — always on top when not logged in */}
       {showJoinOverlay && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/50 backdrop-blur-[2px]">
+        <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-[2px]">
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
             {gameAlreadyStarted ? (
               <>
@@ -119,29 +142,11 @@ export default function LobbyPage() {
               <>
                 <h1 className="text-2xl font-bold mb-1">Join Lobby</h1>
                 <p className="text-gray-400 text-xs mb-4">Code: {lobbyId}</p>
-
-                {previewState && previewState.players.filter((p) => !p.spectator).length > 0 && (
-                  <div className="mb-4 bg-gray-50 rounded-xl p-3">
-                    <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">
-                      Waiting
-                    </p>
-                    <ul className="space-y-1">
-                      {previewState.players
-                        .filter((p) => !p.spectator)
-                        .map((p) => (
-                          <li key={p.name} className="text-gray-700 text-sm font-medium">
-                            {p.name}
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                )}
-
                 <input
                   type="text"
                   autoFocus
                   maxLength={30}
-                  placeholder="Enter your name"
+                  placeholder="Name"
                   value={joinName}
                   onChange={(e) => setJoinName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
