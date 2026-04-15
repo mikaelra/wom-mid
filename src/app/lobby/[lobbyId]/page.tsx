@@ -34,17 +34,20 @@ export default function LobbyPage() {
     }
   }, []);
 
-  // Subscribe to socket state updates for preview when not logged in
+  // Subscribe to socket state updates once the user has typed a name.
+  // The server ignores join_room with an empty name, so we wait until
+  // there is something to send.
+  const typedName = joinName.trim();
   useEffect(() => {
-    if (!lobbyId || !playerNameInit || playerName) return;
+    if (!lobbyId || !playerNameInit || playerName || !typedName) return;
     const sock = getSocket();
     const handleStateUpdate = (data: LobbyState) => setPreviewState(data);
     sock.on('state_update', handleStateUpdate);
-    sock.emit('join_room', { lobby_id: lobbyId, name: '' });
+    sock.emit('join_room', { lobby_id: lobbyId, name: typedName });
     return () => {
       sock.off('state_update', handleStateUpdate);
     };
-  }, [lobbyId, playerNameInit, playerName]);
+  }, [lobbyId, playerNameInit, playerName, typedName]);
 
   // Reset shared action at the start of each new round
   useEffect(() => {
