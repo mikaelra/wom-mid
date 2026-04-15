@@ -13,7 +13,7 @@ import HomeOverlay from '@/components/home/HomeOverlay';
 import WorldMap from '@/components/worldmap/WorldMap';
 import WorldMapOverlay from '@/components/worldmap/WorldMapOverlay';
 import type { City } from '@/lib/cities';
-import { createGremlinLobby, getRaidLobby, getNextRaidTime } from '@/lib/api';
+import { createGremlinLobby, getRaidLobby, getNextRaidTime, checkName, logIn } from '@/lib/api';
 
 // Dynamically import heavy 3D models
 const PlayerV1 = dynamic(() => import('../components/Playerv1'), { ssr: false });
@@ -168,16 +168,24 @@ function adjustSkyColor(hex: string): string {
 // ========== Main page component ==========
 export default function Page() {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
+
+  // Gremlin state
   const [showGremlinPopup, setShowGremlinPopup] = useState(false);
   const [gremlinUsername, setGremlinUsername] = useState('');
   const [gremlinError, setGremlinError] = useState('');
   const [gremlinLoading, setGremlinLoading] = useState(false);
+  const [gremlinStep, setGremlinStep] = useState<'name' | 'email'>('name');
+  const [gremlinEmail, setGremlinEmail] = useState('');
+  const [gremlinEmailError, setGremlinEmailError] = useState('');
 
-  // Athens raid
+  // Athens raid state
   const [showAthensPopup, setShowAthensPopup] = useState(false);
   const [athensUsername, setAthensUsername] = useState('');
   const [athensError, setAthensError] = useState('');
   const [athensLoading, setAthensLoading] = useState(false);
+  const [athensStep, setAthensStep] = useState<'name' | 'email'>('name');
+  const [athensEmail, setAthensEmail] = useState('');
+  const [athensEmailError, setAthensEmailError] = useState('');
 
   // Raid countdown shown over Athens on the globe
   const [athensRaidSecondsUntil, setAthensRaidSecondsUntil] = useState<number | null>(null);
@@ -231,6 +239,9 @@ export default function Page() {
       if (!playerName) {
         setGremlinUsername('');
         setGremlinError('');
+        setGremlinStep('name');
+        setGremlinEmail('');
+        setGremlinEmailError('');
         setShowGremlinPopup(true);
         return;
       }
@@ -245,6 +256,9 @@ export default function Page() {
       if (!playerName) {
         setAthensUsername('');
         setAthensError('');
+        setAthensStep('name');
+        setAthensEmail('');
+        setAthensEmailError('');
         setShowAthensPopup(true);
         return;
       }
@@ -263,6 +277,14 @@ export default function Page() {
     setGremlinError('');
     setGremlinLoading(true);
     try {
+      const check = await checkName(trimmed);
+      if (check.claimed) {
+        setGremlinStep('email');
+        setGremlinEmail('');
+        setGremlinEmailError('');
+        setGremlinLoading(false);
+        return;
+      }
       const data = await createGremlinLobby(trimmed);
       if (typeof window !== 'undefined') localStorage.setItem('playerName', trimmed);
       setShowGremlinPopup(false);
@@ -274,6 +296,25 @@ export default function Page() {
     }
   }, [gremlinUsername, router]);
 
+  const handleGremlinLogin = useCallback(async () => {
+    setGremlinEmailError('');
+    setGremlinLoading(true);
+    try {
+      await logIn(gremlinUsername.trim(), gremlinEmail.trim());
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('playerName', gremlinUsername.trim());
+        localStorage.setItem('playerEmail', gremlinEmail.trim());
+      }
+      const data = await createGremlinLobby(gremlinUsername.trim());
+      setShowGremlinPopup(false);
+      router.push(`/gremlin/${data.lobby_id}`);
+    } catch {
+      setGremlinEmailError('Wrong email');
+    } finally {
+      setGremlinLoading(false);
+    }
+  }, [gremlinUsername, gremlinEmail, router]);
+
   const handleAthensJoin = useCallback(async () => {
     const trimmed = athensUsername.trim();
     if (!trimmed) {
@@ -283,6 +324,14 @@ export default function Page() {
     setAthensError('');
     setAthensLoading(true);
     try {
+      const check = await checkName(trimmed);
+      if (check.claimed) {
+        setAthensStep('email');
+        setAthensEmail('');
+        setAthensEmailError('');
+        setAthensLoading(false);
+        return;
+      }
       if (typeof window !== 'undefined') localStorage.setItem('playerName', trimmed);
       setShowAthensPopup(false);
       enterAthensRaid(trimmed);
@@ -292,6 +341,24 @@ export default function Page() {
       setAthensLoading(false);
     }
   }, [athensUsername, enterAthensRaid]);
+
+  const handleAthensLogin = useCallback(async () => {
+    setAthensEmailError('');
+    setAthensLoading(true);
+    try {
+      await logIn(athensUsername.trim(), athensEmail.trim());
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('playerName', athensUsername.trim());
+        localStorage.setItem('playerEmail', athensEmail.trim());
+      }
+      setShowAthensPopup(false);
+      enterAthensRaid(athensUsername.trim());
+    } catch {
+      setAthensEmailError('Wrong email');
+    } finally {
+      setAthensLoading(false);
+    }
+  }, [athensUsername, athensEmail, enterAthensRaid]);
 
   const handleBackToMap = useCallback(() => {
     setSelectedCity(null);
@@ -320,36 +387,76 @@ export default function Page() {
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-bold mb-1 text-red-400">Enter the Hades Raid</h2>
-              <p className="text-sm text-white/60 mb-4">Choose a battle name to face Hades.</p>
-              <input
-                type="text"
-                placeholder="Your battle name"
-                value={athensUsername}
-                onChange={(e) => setAthensUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAthensJoin()}
-                autoFocus
-                className="w-full p-2 rounded-md bg-gray-800 border border-red-700/50 text-white placeholder-white/30 focus:outline-none focus:border-red-500 mb-3"
-              />
-              {athensError && (
-                <p className="text-red-400 text-sm mb-3">{athensError}</p>
+              {athensStep === 'name' ? (
+                <>
+                  <p className="text-sm text-white/60 mb-4">Choose a battle name to face Hades.</p>
+                  <input
+                    type="text"
+                    placeholder="Your battle name"
+                    value={athensUsername}
+                    onChange={(e) => setAthensUsername(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAthensJoin()}
+                    autoFocus
+                    className="w-full p-2 rounded-md bg-gray-800 border border-red-700/50 text-white placeholder-white/30 focus:outline-none focus:border-red-500 mb-3"
+                  />
+                  {athensError && (
+                    <p className="text-red-400 text-sm mb-3">{athensError}</p>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleAthensJoin}
+                      disabled={athensLoading}
+                      className="flex-1 py-2 rounded-lg bg-red-700 hover:bg-red-600 font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {athensLoading ? 'Checking...' : 'Enter Raid'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAthensPopup(false)}
+                      className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-white/60 mb-4">
+                    This name is claimed. Type your email if you have claimed this username.
+                  </p>
+                  <label className="block text-sm text-white/70 mb-1">Email</label>
+                  <input
+                    type="email"
+                    placeholder="Your email"
+                    value={athensEmail}
+                    onChange={(e) => setAthensEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAthensLogin()}
+                    autoFocus
+                    className="w-full p-2 rounded-md bg-gray-800 border border-red-700/50 text-white placeholder-white/30 focus:outline-none focus:border-red-500 mb-3"
+                  />
+                  {athensEmailError && (
+                    <p className="text-red-400 text-sm mb-3">{athensEmailError}</p>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleAthensLogin}
+                      disabled={athensLoading}
+                      className="flex-1 py-2 rounded-lg bg-red-700 hover:bg-red-600 font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {athensLoading ? 'Logging in...' : 'Log in'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAthensStep('name'); setAthensUsername(''); setAthensEmail(''); setAthensEmailError(''); }}
+                      className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
+                    >
+                      Choose new name
+                    </button>
+                  </div>
+                </>
               )}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleAthensJoin}
-                  disabled={athensLoading}
-                  className="flex-1 py-2 rounded-lg bg-red-700 hover:bg-red-600 font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {athensLoading ? 'Entering...' : 'Enter Raid'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAthensPopup(false)}
-                  className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -365,36 +472,76 @@ export default function Page() {
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-bold mb-1 text-green-400">Enter the Gremlin&apos;s Lair</h2>
-              <p className="text-sm text-white/60 mb-4">Choose a battle name to join the fight.</p>
-              <input
-                type="text"
-                placeholder="Your battle name"
-                value={gremlinUsername}
-                onChange={(e) => setGremlinUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleGremlinJoin()}
-                autoFocus
-                className="w-full p-2 rounded-md bg-gray-800 border border-green-700/50 text-white placeholder-white/30 focus:outline-none focus:border-green-500 mb-3"
-              />
-              {gremlinError && (
-                <p className="text-red-400 text-sm mb-3">{gremlinError}</p>
+              {gremlinStep === 'name' ? (
+                <>
+                  <p className="text-sm text-white/60 mb-4">Choose a battle name to join the fight.</p>
+                  <input
+                    type="text"
+                    placeholder="Your battle name"
+                    value={gremlinUsername}
+                    onChange={(e) => setGremlinUsername(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleGremlinJoin()}
+                    autoFocus
+                    className="w-full p-2 rounded-md bg-gray-800 border border-green-700/50 text-white placeholder-white/30 focus:outline-none focus:border-green-500 mb-3"
+                  />
+                  {gremlinError && (
+                    <p className="text-red-400 text-sm mb-3">{gremlinError}</p>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleGremlinJoin}
+                      disabled={gremlinLoading}
+                      className="flex-1 py-2 rounded-lg bg-green-700 hover:bg-green-600 font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {gremlinLoading ? 'Checking...' : 'Join Battle'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowGremlinPopup(false)}
+                      className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-white/60 mb-4">
+                    This name is claimed. Type your email if you have claimed this username.
+                  </p>
+                  <label className="block text-sm text-white/70 mb-1">Email</label>
+                  <input
+                    type="email"
+                    placeholder="Your email"
+                    value={gremlinEmail}
+                    onChange={(e) => setGremlinEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleGremlinLogin()}
+                    autoFocus
+                    className="w-full p-2 rounded-md bg-gray-800 border border-green-700/50 text-white placeholder-white/30 focus:outline-none focus:border-green-500 mb-3"
+                  />
+                  {gremlinEmailError && (
+                    <p className="text-red-400 text-sm mb-3">{gremlinEmailError}</p>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleGremlinLogin}
+                      disabled={gremlinLoading}
+                      className="flex-1 py-2 rounded-lg bg-green-700 hover:bg-green-600 font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {gremlinLoading ? 'Logging in...' : 'Log in'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setGremlinStep('name'); setGremlinUsername(''); setGremlinEmail(''); setGremlinEmailError(''); }}
+                      className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
+                    >
+                      Choose new name
+                    </button>
+                  </div>
+                </>
               )}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleGremlinJoin}
-                  disabled={gremlinLoading}
-                  className="flex-1 py-2 rounded-lg bg-green-700 hover:bg-green-600 font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {gremlinLoading ? 'Entering...' : 'Join Battle'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowGremlinPopup(false)}
-                  className="flex-1 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 font-bold text-white transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
             </div>
           </div>
         )}
