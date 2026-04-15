@@ -11,6 +11,32 @@ export function getSocket(): Socket {
   return socket;
 }
 
+export async function checkName(name: string): Promise<{ claimed: boolean }> {
+  const res = await fetch(`${BACKEND_URL}/check_name`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error((errorData as { error?: string }).error ?? "Failed to check name");
+  }
+  return res.json();
+}
+
+export async function logIn(name: string, email: string): Promise<{ success: boolean }> {
+  const res = await fetch(`${BACKEND_URL}/log_in`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error((errorData as { error?: string }).error ?? "Login failed");
+  }
+  return res.json();
+}
+
 export async function createLobby(name: string, email: string): Promise<{ lobby_id: string }> {
   const res = await fetch(`${BACKEND_URL}/create_lobby`, {
     method: "POST",
