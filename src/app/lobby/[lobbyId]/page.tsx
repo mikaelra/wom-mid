@@ -4,27 +4,12 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import dynamic from 'next/dynamic';
-import LobbyOverlay, { renderPreGame } from '@/components/lobby/LobbyOverlay';
-import { btn } from '@/components/SceneOverlay';
+import LobbyOverlay from '@/components/lobby/LobbyOverlay';
 import { BASE_FOV } from '@/lib/sceneConstants';
 import { getSocket, joinLobby } from '@/lib/api';
 import type { LobbyState } from '@/types/game';
 
 const LobbyScene = dynamic(() => import('@/components/lobby/LobbyScene'), { ssr: false });
-
-const EMPTY_PREVIEW: LobbyState = {
-  round: 0,
-  players: [],
-  winner: null,
-  raidwinner: null,
-  pending_deny: null,
-  deny_target: null,
-  readyPlayers: [],
-  round_end_time: null,
-  start_time: 0,
-  boss_fight: null,
-  gameover: null,
-};
 
 export default function LobbyPage() {
   const params = useParams();
@@ -91,10 +76,9 @@ export default function LobbyPage() {
     );
   }
 
-  const displayState = previewState ?? EMPTY_PREVIEW;
-  const gameAlreadyStarted = displayState.round > 0;
+  const gameAlreadyStarted = (previewState?.round ?? 0) > 0;
   const showJoinOverlay = playerNameInit && !playerName;
-  const sceneState = playerName ? lobbyState : previewState;
+  const adminName = previewState?.players.find((p) => p.admin)?.name ?? null;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
@@ -103,7 +87,7 @@ export default function LobbyPage() {
         style={{ position: 'absolute', inset: 0 }}
       >
         <LobbyScene
-          state={sceneState}
+          state={playerName ? lobbyState : previewState}
           playerName={playerName}
           lobbyId={lobbyId}
           currentAction={sharedAction}
@@ -121,31 +105,8 @@ export default function LobbyPage() {
         />
       )}
 
-      {/* Pre-game lobby view — always visible to the visitor as background, pointer-events
-          disabled so only the modal above handles interactions */}
-      {showJoinOverlay && !gameAlreadyStarted && (
-        <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
-          {renderPreGame({
-            state: displayState,
-            lobbyId: lobbyId,
-            playerName: '',
-            isAdmin: false,
-            boss: displayState.players.find((p) => p.boss),
-            raidMins: null,
-            raidSecs: null,
-            btn,
-            onStartGame: () => {},
-            onAddDummy: () => {},
-            onKick: () => {},
-            floatingMessages: [],
-            onDoneFloating: () => {},
-          })}
-        </div>
-      )}
-
-      {/* Name-entry modal — sits on top of the pre-game overlay */}
       {showJoinOverlay && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-[2px]">
+        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/40 backdrop-blur-[2px]">
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
             {gameAlreadyStarted ? (
               <>
@@ -161,7 +122,10 @@ export default function LobbyPage() {
             ) : (
               <>
                 <h1 className="text-2xl font-bold mb-1">Join Lobby</h1>
-                <p className="text-gray-400 text-xs mb-4">Code: {lobbyId}</p>
+                <p className="text-gray-400 text-xs mb-1">Code: {lobbyId}</p>
+                {adminName && (
+                  <p className="text-gray-500 text-sm mb-4">Hosted by {adminName}</p>
+                )}
                 <input
                   type="text"
                   autoFocus

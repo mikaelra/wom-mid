@@ -53,7 +53,7 @@ function renderGameOver({ state, playerName, btn, replayVoted, replayLoading, on
   );
 }
 
-export function renderPreGame({
+function renderPreGame({
   state,
   lobbyId,
   playerName,
